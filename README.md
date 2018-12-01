@@ -7,12 +7,17 @@ Package version: 0.3
 FBSD: /usr/local/share/vim/vim74/plugin
 
       cp plugin/airline.vim .
-      
       cp airline-themes.vim .
       
 *NIX: /usr/share/vim/vim80/plugin
 
       cp plugin/airline.vim .
-      
       cp plugin/airline-themes.vim .
       
+FBSD: /usr/local/share/vim/vim74/autoload
+
+      cp autoload/ .
+      
+*NIX: /usr/share/vim/vim80/autoload
+
+      cp autoload/ .
