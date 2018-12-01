@@ -1,8 +1,13 @@
 "==============================================
-" version: 0.2
-
-" Use Vim settings, rather then Vi settings (much better!).
-" This must be first, because it changes other options as a side effect.
+" Jin's .vimrc 2018
+" version                   : 0.3
+" 
+"
+" colorscheme path (*NIX)   : /usr/share/vim/vim80/colors/
+" colorscheme path (FBSD)   : /usr/local/share/vim/vim74/colors/
+"
+" Use Vim settings, rather then Vi settings
+" This must be first as it changes other options as a side effect.
 set nocompatible
 
 set t_Co=256
