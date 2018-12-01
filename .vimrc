@@ -1,10 +1,11 @@
 "==============================================
 " Jin's .vimrc 2018
-" version                   : 0.3
-" 
+" version                   : 0.4
 "
-" colorscheme path (*NIX)   : /usr/share/vim/vim80/colors/
-" colorscheme path (FBSD)   : /usr/local/share/vim/vim74/colors/
+" plugin path (*NIX)        : /usr/share/vim/vim80/plugin           # airline
+" plugin path (FBSD)        : /usr/local/share/vim/vim74/plugin     # airline
+" colorscheme path (*NIX)   : /usr/share/vim/vim80/colors/          # badwolf
+" colorscheme path (FBSD)   : /usr/local/share/vim/vim74/colors/    # badwolf
 "
 " Use Vim settings, rather then Vi settings
 " This must be first as it changes other options as a side effect.
