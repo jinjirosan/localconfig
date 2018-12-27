@@ -1,6 +1,6 @@
 "==============================================
 " Jin's .vimrc 2018
-" version                   : 0.4
+" version                   : 0.5
 "
 " plugin path (*NIX)        : /usr/share/vim/vim80/plugin           # airline
 " plugin path (FBSD)        : /usr/local/share/vim/vim74/plugin     # airline
@@ -32,20 +32,23 @@ set gcr=a:blinkon0              "Disable cursor blink
 set visualbell                  "No sounds
 set autoread                    "Reload files changed outside vim
 
-set tabstop=4
-set softtabstop=4
-set expandtab
-set cursorline
-filetype indent on
-set wildmenu
-set showmatch
+set tabstop=4                   "how many columns makes up a tab
+set softtabstop=4               "when using the TB key, how many spaces to move
+set expandtab                   "convert each tab to the number of space set in tabstop
+set cursorline                  "highlight the entire line not only the cursor itself
+filetype indent on              "use indentation scripts to set indent correctly for each language
+set wildmenu                    "autocomplete commands and auto-tab-lookup bar
+
+au BufWinLeave * mkview          "save the current state of folds in file
+au BufWinEnter * silent loadview "load the foldstate as previously close
 
 set clipboard=unnamedplus
 
 " ================ Search ===========================
-set ignorecase
-set incsearch
-set hlsearch
+set ignorecase                  "case-insensitive searches
+set showmatch                   "highlight a / search string match
+set incsearch                   "incremetnal searching plugin, highlight all matches while searching
+set hlsearch                    "highligh all search matches permanently (until clear)
 
 nnoremap <leader><space> :nohlsearch<CR>
 " move to beginning/end of line
@@ -67,9 +70,11 @@ endif
 
 " ================ Scrolling ========================
 
-set scrolloff=8         "Start scrolling when we're 8 lines away from margins
-set sidescrolloff=15
-set sidescroll=1
+set scrolloff=8         "Start scrolling 8 lines away from margins
+set sidescrolloff=15    "The number of columns to keep left and right of the cursor
+set sidescroll=1        "scroll one char at a time to the right when needed instead of jumping
 
 " ========== copy without row numbers ===============
 set mouse+=a
+
+" vim: filetype=screen foldmethod=marker
