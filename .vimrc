@@ -21,7 +21,7 @@ let g:badwolf_css_props_highlight = 1
 " Make the tab line darker than the background.
 let g:badwolf_tabline = 0
 
-" ================ General Config ====================
+" ================ General Config ==================== {{{1
 
 set number                      "Line numbers are good
 set backspace=indent,eol,start  "Allow backspace in insert mode
@@ -44,7 +44,7 @@ au BufWinEnter * silent loadview "load the foldstate as previously close
 
 set clipboard=unnamedplus
 
-" ================ Search ===========================
+" ================ Search =========================== {{{1
 set ignorecase                  "case-insensitive searches
 set showmatch                   "highlight a / search string match
 set incsearch                   "incremetnal searching plugin, highlight all matches while searching
@@ -59,7 +59,7 @@ nnoremap E $
 nnoremap $ <nop>
 nnoremap ^ <nop>
 
-" ================ Persistent Undo ==================
+" ================ Persistent Undo ================== {{{1
 " Keep undo history across sessions, by storing in file.
 " Only works all the time.
 if has('persistent_undo') && isdirectory(expand('~').'/.vim/backups')
@@ -68,13 +68,13 @@ if has('persistent_undo') && isdirectory(expand('~').'/.vim/backups')
     set undofile
 endif
 
-" ================ Scrolling ========================
+" ================ Scrolling ======================== {{{1
 
 set scrolloff=8         "Start scrolling 8 lines away from margins
 set sidescrolloff=15    "The number of columns to keep left and right of the cursor
 set sidescroll=1        "scroll one char at a time to the right when needed instead of jumping
 
-" ========== copy without row numbers ===============
+" ========== copy without row numbers =============== {{{1
 set mouse+=a
 
 " vim: filetype=screen foldmethod=marker
