@@ -1,6 +1,6 @@
 "==============================================
 " Jin's .vimrc 2018
-" version                   : 0.5
+" version                   : 0.6
 "
 " plugin path (*NIX)        : /usr/share/vim/vim80/plugin           # airline
 " plugin path (FBSD)        : /usr/local/share/vim/vim74/plugin     # airline
@@ -67,6 +67,13 @@ if has('persistent_undo') && isdirectory(expand('~').'/.vim/backups')
     set undodir=~/.vim/backups
     set undofile
 endif
+
+" ================ folding ========================== {{{1
+set foldenable
+set foldlevelstart=10
+set foldnestmax=10
+nnoremap <space> za
+set foldmethod=marker
 
 " ================ Scrolling ======================== {{{1
 
