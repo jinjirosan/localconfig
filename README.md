@@ -1,5 +1,6 @@
 # localconfig
-Local config files for consistent user environment ... everywhere :-)
+Local config files for a consistent user environment ... everywhere :-)
+Putting them on github makes it easy to deploy on every 'new' system I work on. Also makes it easier to share.
 
 Package version: 0.4
 
