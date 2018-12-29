@@ -8,7 +8,7 @@ Package version: 0.4
 Depending on the OS and VIM version, the installation path may be different. I'm using three versions for .screenrc:
 1) generic for FBSD
 2) generic for Raspberry (Debian)
-3) specific for Kali
+3) specific for Kali --> included here
 
 ## vim & screen configs
 Copy .vimrc and .screenrc to your home dir
