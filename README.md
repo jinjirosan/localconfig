@@ -1,10 +1,14 @@
 # localconfig
-Local config files for consistent user environment ... everywhere :-)
+Local config files for a consistent user environment ... everywhere :-)
+Putting them on github makes it easy to deploy on every 'new' system I work on. Also makes it easier to share.
 
 Package version: 0.4
 
 # Installation
-Depending on the OS and VIM version, the installation path may be different. I'm using FBSD or Raspberry (Debian).
+Depending on the OS and VIM version, the installation path may be different. I'm using three versions for .screenrc:
+1) generic for FBSD
+2) generic for Raspberry (Debian)
+3) specific for Kali
 
 ## vim & screen configs
 Copy .vimrc and .screenrc to your home dir
