@@ -41,8 +41,8 @@ FBSD: /usr/local/share/vim/vim74/plugin
 ## vim autoload
 FBSD: /usr/local/share/vim/vim74/autoload
 
-      cp autoload/ .
+      cp -r autoload/ .
       
 *NIX: /usr/share/vim/vim80/autoload
 
-      cp autoload/ .
+      cp -r autoload/ .
