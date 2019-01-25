@@ -12,6 +12,7 @@ Depending on the OS and VIM version, the installation path may be different. I'm
 
 ## vim & screen configs
 Copy .vimrc and .screenrc to your home dir
+create .vim dir under home dir
 
 ## vim color theme
 The badwolf color theme is not mine, see https://github.com/sjl/badwolf
