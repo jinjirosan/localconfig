@@ -1,6 +1,6 @@
 "==============================================
 " Jin's .vimrc 2018
-" version                   : 0.6.1
+" version                   : 0.6.2
 "
 " plugin path (*NIX)        : /usr/share/vim/vim80/plugin           # airline
 " plugin path (FBSD)        : /usr/local/share/vim/vim74/plugin     # airline
@@ -42,7 +42,7 @@ set wildmenu                    "autocomplete commands and auto-tab-lookup bar
 au BufWinLeave * mkview          "save the current state of folds in file
 au BufWinEnter * silent loadview "load the foldstate as previously close
 
-set clipboard=unnamedplus
+set clipboard=unnamed,unnamedplus
 
 " ================ Search =========================== {{{1
 set ignorecase                  "case-insensitive searches
@@ -58,6 +58,7 @@ nnoremap E $
 " $/^ doesn't do anything
 nnoremap $ <nop>
 nnoremap ^ <nop>
+nnoremap <CR> :noh<CR><CR>      " Unsets last search pattern register by hitting ENTER
 
 " ============ No indent on paste buffer ============ {{{1
 set pastetoggle=<C-P>
