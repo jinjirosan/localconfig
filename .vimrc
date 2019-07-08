@@ -1,6 +1,6 @@
 "==============================================
 " Jin's .vimrc 2018
-" version                   : 0.6
+" version                   : 0.6.1
 "
 " plugin path (*NIX)        : /usr/share/vim/vim80/plugin           # airline
 " plugin path (FBSD)        : /usr/local/share/vim/vim74/plugin     # airline
@@ -15,11 +15,11 @@ set t_Co=256
 syntax enable
 colorscheme badwolf
 " Make the gutters darker than the background.
-let g:badwolf_darkgutter = 1
+"let g:badwolf_darkgutter = 1
 " Turn on CSS properties highlighting
 let g:badwolf_css_props_highlight = 1
 " Make the tab line darker than the background.
-let g:badwolf_tabline = 0
+"let g:badwolf_tabline = 0
 
 " ================ General Config ==================== {{{1
 
@@ -58,6 +58,9 @@ nnoremap E $
 " $/^ doesn't do anything
 nnoremap $ <nop>
 nnoremap ^ <nop>
+
+" ============ No indent on paste buffer ============ {{{1
+set pastetoggle=<C-P>
 
 " ================ Persistent Undo ================== {{{1
 " Keep undo history across sessions, by storing in file.
