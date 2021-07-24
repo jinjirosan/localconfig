@@ -1,6 +1,6 @@
-# Jin's screenrc 2018
-# usage   : Raspberry
-# version : 0.2
+# Jin's screenrc 2018-2021
+# usage   : Debian
+# version : 0.4
 # window  : 128x50 minimum size
 
 # Escape key is C-t, literal is a.
@@ -331,7 +331,7 @@ select -
 # Window  {{{1
 #-------------------------------------------------------------------------------
 select Main
-  screen -t MM-home 0 
+  screen -t Main 0 
   screen 1 
   screen 2
   screen 3
@@ -339,7 +339,7 @@ select Main
 
 select Monitor
   screen -t top 89 htop
-  screen -t network 88 sudo nethogs
+  screen -t network 88 sudo watch -c -d -n3 "lsof -i4 -T -g -M -b | sed -e 's/\s\s*/ /g' | cut -d' ' -f 1,10 | sed -e 's/ / || /'"
   # exit the window group
   select -
 

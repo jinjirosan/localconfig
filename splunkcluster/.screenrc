@@ -1,6 +1,6 @@
-# Jin's screenrc 2019
+# Jin's screenrc 2019-2021
 # usage   : Splunk Cluster: Deployment Server autologins
-# version : 0.6.1
+# version : 0.7
 # window  : 128x50 minimum size
 
 # Escape key is C-t, literal is a.
@@ -341,7 +341,7 @@ select Main
 
 select Monitor
   screen -t top 89 htop
-  screen -t network 88 sudo nethogs
+  screen -t network 88 sudo watch -c -d -n3 "lsof -i4 -T -g -M -b | sed -e 's/\s\s*/ /g' | cut -d' ' -f 1,10 | sed -e 's/ / || /'"
   # exit the window group
   select -
 
