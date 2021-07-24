@@ -1,7 +1,7 @@
 #!/bin/bash
 #==============================================
 # Jin's .bashrc 2010-2021
-# version    : 0.8
+# version    : 0.8.1
 
 # Source global definitions
 if [ -f /etc/bashrc ]; then
@@ -379,7 +379,7 @@ install_bashrc_support ()
                 sudo zypper install tree
                 sudo zypper install joe
         elif [ $dtype == "debian" ]; then
-                sudo apt-get install multitail tree joe
+                sudo apt-get install multitail tree joe screen vim-gtk htop
         elif [ $dtype == "gentoo" ]; then
                 sudo emerge multitail
                 sudo emerge tree
