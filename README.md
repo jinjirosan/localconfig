@@ -1,48 +1,39 @@
 # localconfig
-Local config files for a consistent user environment ... everywhere :-)
-Putting them on github makes it easy to deploy on every 'new' system I work on. Also makes it easier to share.
+These are the Local Config files for a consistent user environment which I use... everywhere :-)
+It's mainly .screenrc / .vimrc / .bashrc
 
-Package version: 0.4
+Package version: 0.5 (2021 update)
+
+# Pre-requisites
+1. Ensure you have edited your sudoers file for passwordless sudo
+2. install the following dependencies: 
+   1. vim-gtk
+   2. htop
 
 # Installation
 Depending on the OS and VIM version, the installation path may be different. I'm using three versions for .screenrc:
-1) generic for FBSD
-2) generic for Raspberry (Debian) --> included here
-3) specific for Kali --> included here
+1) generic for FBSD   --> see folder 1-FBSD 
+2) generic for Debian --> see folder 2-Debian
+3) specific for Kali  --> see folder 3-Kali
 
 ## vim & screen configs
-Copy .vimrc and .screenrc to your home dir
-create .vim dir under home dir
+1. Copy .vimrc and .screenrc to your home dir
+2. Create .vim dir under home dir
 
 ## vim color theme
 The badwolf color theme is not mine, see https://github.com/sjl/badwolf
+Change the ** to your installed version of VIM. Copy the badwolf.vim to colors/
 
-FBSD: /usr/local/share/vim/vim74/colors
-
+      /usr/local/share/vim/vim**/colors or /usr/share/vim/vim**/colors
       cp colors/badwolf.vim .
-
-*NIX: /usr/share/vim/vim80/colors
-
-      cp colors/badwolf.vim .
-      
 ## vim plugin
 I'm using the airline plugin, see https://github.com/vim-airline/vim-airline
+Change the ** to your installed version of VIM. Copy the airline files to plugin/
 
-FBSD: /usr/local/share/vim/vim74/plugin
+      /usr/local/share/vim/vim**/plugin or /usr/share/vim/vim**/plugin
 
       cp plugin/airline.vim .
       cp airline-themes.vim .
-      
-*NIX: /usr/share/vim/vim80/plugin
-
-      cp plugin/airline.vim .
-      cp plugin/airline-themes.vim .
-
 ## vim autoload
-FBSD: /usr/local/share/vim/vim74/autoload
-
-      cp -r autoload/ .
-      
-*NIX: /usr/share/vim/vim80/autoload
-
+      /usr/local/share/vim/vim**/autoload or /usr/local/share/vim/vim**/autoload
       cp -r autoload/ .
