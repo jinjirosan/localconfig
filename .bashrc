@@ -58,7 +58,7 @@ export LESS_TERMCAP_ue=$'\E[0m'
 export LESS_TERMCAP_us=$'\E[01;32m'
 
 #==============================================
-# GENERAL ALIAS'S
+# GENERAL ALIASES
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
@@ -305,12 +305,11 @@ distribution ()
                 [ zz`type -t passed 2>/dev/null` == "zzfunction" ] && dtype="redhat"
 
         # Then test against SUSE (must be after Redhat,
-        # I've seen rc.status on Ubuntu I think? TODO: Recheck that)
         elif [ -r /etc/rc.status ]; then
                 source /etc/rc.status
                 [ zz`type -t rc_reset 2>/dev/null` == "zzfunction" ] && dtype="suse"
 
-        # Then test against Debian, Ubuntu and friends
+        # Then test against Debian, Ubuntu
         elif [ -r /lib/lsb/init-functions ]; then
                 source /lib/lsb/init-functions
                 [ zz`type -t log_begin_msg 2>/dev/null` == "zzfunction" ] && dtype="debian"
@@ -321,7 +320,6 @@ distribution ()
                 [ zz`type -t ebegin 2>/dev/null` == "zzfunction" ] && dtype="gentoo"
 
         # For Mandriva we currently just test if /etc/mandriva-release exists
-        # and isn't empty (TODO: Find a better way :)
         elif [ -s /etc/mandriva-release ]; then
                 dtype="mandriva"
 
@@ -373,21 +371,18 @@ install_bashrc_support ()
         dtype=$(distribution)
 
         if [ $dtype == "redhat" ]; then
-                sudo yum install multitail tree joe
+                sudo yum install multitail tree screen vim-gtk htop 
         elif [ $dtype == "suse" ]; then
                 sudo zypper install multitail
                 sudo zypper install tree
-                sudo zypper install joe
         elif [ $dtype == "debian" ]; then
-                sudo apt-get install multitail tree joe screen vim-gtk htop
+                sudo apt-get install multitail tree screen vim-gtk htop
         elif [ $dtype == "gentoo" ]; then
                 sudo emerge multitail
                 sudo emerge tree
-                sudo emerge joe
         elif [ $dtype == "mandriva" ]; then
                 sudo urpmi multitail
                 sudo urpmi tree
-                sudo urpmi joe
         elif [ $dtype == "slackware" ]; then
                 echo "No install support for Slackware"
         else
