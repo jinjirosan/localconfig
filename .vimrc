@@ -1,6 +1,6 @@
 "==============================================
-" Jin's .vimrc 2018
-" version                   : 0.6.2
+" Jin's .vimrc 2018-2021
+" version                   : 0.7
 "
 " plugin path (*NIX)        : /usr/share/vim/vim80/plugin           # airline
 " plugin path (FBSD)        : /usr/local/share/vim/vim74/plugin     # airline
@@ -11,53 +11,52 @@
 " This must be first as it changes other options as a side effect.
 set nocompatible
 
+" ================ Colorscheme ==================== {{{1
 set t_Co=256
 syntax enable
+
 colorscheme badwolf
-" Make the gutters darker than the background.
-"let g:badwolf_darkgutter = 1
-" Turn on CSS properties highlighting
-let g:badwolf_css_props_highlight = 1
-" Make the tab line darker than the background.
-"let g:badwolf_tabline = 0
+let g:badwolf_darkgutter = 1            " Make the gutters darker than the background.
+let g:badwolf_css_props_highlight = 1   " Turn on CSS properties highlighting
+let g:badwolf_tabline = 0               " Make the tab line darker than the background.
 
 " ================ General Config ==================== {{{1
 
-set number                      "Line numbers are good
-set backspace=indent,eol,start  "Allow backspace in insert mode
-set history=1000                "Store lots of :cmdline history
-set showcmd                     "Show incomplete cmds down the bottom
-set showmode                    "Show current mode down the bottom
-set gcr=a:blinkon0              "Disable cursor blink
-set visualbell                  "No sounds
-set autoread                    "Reload files changed outside vim
+set number                       "Line numbers are good
+set backspace=indent,eol,start   "Allow backspace in insert mode
+set history=1000                 "Store lots of :cmdline history
+set showcmd                      "Show incomplete cmds down the bottom
+set showmode                     "Show current mode down the bottom
+set gcr=a:blinkon0               "Disable cursor blink
+set visualbell                   "No sounds
+set autoread                     "Reload files changed outside vim
 
-set tabstop=4                   "how many columns makes up a tab
-set softtabstop=4               "when using the TB key, how many spaces to move
-set expandtab                   "convert each tab to the number of space set in tabstop
-set cursorline                  "highlight the entire line not only the cursor itself
-filetype indent on              "use indentation scripts to set indent correctly for each language
-set wildmenu                    "autocomplete commands and auto-tab-lookup bar
+set tabstop=4                    "how many columns makes up a tab
+set softtabstop=4                "when using the TB key, how many spaces to move
+set expandtab                    "convert each tab to the number of space set in tabstop
+set cursorline                   "highlight the entire line not only the cursor itself
+filetype indent on               "use indentation scripts to set indent correctly for each language
+set wildmenu                     "autocomplete commands and auto-tab-lookup bar
 
-au BufWinLeave * mkview          "save the current state of folds in file
-au BufWinEnter * silent loadview "load the foldstate as previously close
+au BufWinLeave * mkview           "save the current state of folds in file
+au BufWinEnter * silent loadview  "load the foldstate as previously close
 
-set clipboard=unnamed,unnamedplus
+set clipboard=unnamed,unnamedplus "Enable using system clipboard (doesn't seem to work well)
 
 " ================ Search =========================== {{{1
-set ignorecase                  "case-insensitive searches
-set showmatch                   "highlight a / search string match
-set incsearch                   "incremetnal searching plugin, highlight all matches while searching
-set hlsearch                    "highligh all search matches permanently (until clear)
+set ignorecase                    "case-insensitive searches
+set showmatch                     "highlight a / search string match
+set incsearch                     "incremetnal searching plugin, highlight all matches while searching
+set hlsearch                      "highligh all search matches permanently (until clear)
 
+" ================ Moving Around =========================== {{{1
 nnoremap <leader><space> :nohlsearch<CR>
-" move to beginning/end of line
-nnoremap B ^
-nnoremap E $
+nnoremap B ^                    " move cursor to beginning of line
+nnoremap E $                    " move cursor to end of line
 
-" $/^ doesn't do anything
-nnoremap $ <nop>
-nnoremap ^ <nop>
+nnoremap $ <nop>                " Remove $
+nnoremap ^ <nop>                " Remove ^
+
 nnoremap <CR> :noh<CR><CR>      " Unsets last search pattern register by hitting ENTER
 
 " ============ No indent on paste buffer ============ {{{1
@@ -71,6 +70,10 @@ if has('persistent_undo') && isdirectory(expand('~').'/.vim/backups')
     set undodir=~/.vim/backups
     set undofile
 endif
+
+" ================ Copy-Paste To OSX Clipboard =============== {{{1
+"let @c = ':w !xsel -i -b'
+"let @p = ':r !xsel -o -b'
 
 " ================ folding ========================== {{{1
 set foldenable
@@ -88,4 +91,5 @@ set sidescroll=1        "scroll one char at a time to the right when needed inst
 " ========== copy without row numbers =============== {{{1
 set mouse+=a
 
+" ========== Testing stuff =============== {{{1
 " vim: filetype=screen foldmethod=marker
