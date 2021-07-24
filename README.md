@@ -16,9 +16,10 @@ Package version: 0.5 (2021 update)
 
 Depending on the OS and VIM version, the installation path may be different. I'm using three versions for .screenrc:
 
-1) generic for FBSD   --> see folder 1-FBSD
-2) generic for Debian --> see folder 2-Debian
-3) specific for Kali  --> see folder 3-Kali
+1) generic for SplunkCluster  --> see folder 1-splunkcluster
+2) generic for Debian         --> see folder 2-Debian
+3) specific for Kali          --> see folder 3-Kali
+4) specific for FBSD          --> see folder 4-FBSD
 
 ### vim & screen configs
 
