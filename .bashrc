@@ -1,7 +1,7 @@
 #!/bin/bash
 #==============================================
 # Jin's .bashrc 2010-2021
-# version    : 0.8.1
+# version    : 0.8.2
 
 # Source global definitions
 if [ -f /etc/bashrc ]; then
@@ -18,6 +18,9 @@ fi
 #==============================================
 # EXPORTS
 
+# Test of bash is in interactive mode. If it is, then some exports are different
+iacheck=$(expr index "$-" i)
+
 # Disable the bell
 if [[ $iatest > 0 ]]; then bind "set bell-style visible"; fi
 
@@ -25,27 +28,30 @@ if [[ $iatest > 0 ]]; then bind "set bell-style visible"; fi
 export HISTFILESIZE=10000
 export HISTSIZE=500
 
+# Set VIM as default editor
+export EDITOR=vim
+
 # Don't put duplicate lines in the history and do not add lines that start with a space
 export HISTCONTROL=erasedups:ignoredups:ignorespace
 
 # Check the window size after each command and, if necessary, update the values of LINES and COLUMNS
 shopt -s checkwinsize
 
-# Causes bash to append to history instead of overwriting it so if you start a new terminal, you have old session history
+# Append to history instead of overwriting it. Every new terminal, we have the old session history
 shopt -s histappend
 PROMPT_COMMAND='history -a'
 
 # Ignore case on auto-completion
 # Note: bind used instead of sticking these in .inputrc
-if [[ $iatest > 0 ]]; then bind "set completion-ignore-case on"; fi
+if [[ $iacheck > 0 ]]; then bind "set completion-ignore-case on"; fi
 
 # Show auto-completion list automatically, without double tab
-if [[ $iatest > 0 ]]; then bind "set show-all-if-ambiguous On"; fi
+if [[ $iacheck > 0 ]]; then bind "set show-all-if-ambiguous On"; fi
 
 # To have colors for ls and all grep commands such as grep, egrep and zgrep
 export CLICOLOR=1
 export LS_COLORS='no=00:fi=00:di=00;34:ln=01;36:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arj=01;31:*.taz=01;31:*.lzh=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.gz=01;31:*.bz2=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.avi=01;35:*.fli=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.ogg=01;35:*.mp3=01;35:*.wav=01;35:*.xml=00;31:'
-alias grep="/usr/bin/grep $GREP_OPTIONS"
+alias grep="/bin/grep $GREP_OPTIONS"
 unset GREP_OPTIONS
 
 # Color for manpages in less makes manpages a little easier to read
@@ -58,7 +64,7 @@ export LESS_TERMCAP_ue=$'\E[0m'
 export LESS_TERMCAP_us=$'\E[01;32m'
 
 #==============================================
-# GENERAL ALIASES
+# ALIASES
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
@@ -70,10 +76,10 @@ alias ebrc='edit ~/.bashrc'
 # Show help for this .bashrc file
 alias hlp='less ~/.bashrc_help'
 
-# alias to show the date
-alias da='date "+%Y-%m-%d %A %T %Z"'
+# alias to show the date and time
+alias dat='date "+%Y-%m-%d %A %T %Z"'
 
-# Alias's to modified commands
+# Aliases to modified commands
 alias cp='cp -i'
 alias mv='mv -i'
 alias rm='rm -iv'
@@ -84,7 +90,6 @@ alias less='less -R'
 alias cls='clear'
 alias apt-get='sudo apt-get'
 alias multitail='multitail --no-repeat -c'
-alias freshclam='sudo freshclam'
 alias vi='vim'
 alias svi='sudo vi'
 alias vis='vim "+set si"'
@@ -103,7 +108,7 @@ alias bd='cd "$OLDPWD"'
 # Remove a directory and all files
 alias rmd='/bin/rm  --recursive --force --verbose '
 
-# Alias's for multiple directory listing commands
+# Alias variations on ls
 alias la='ls -Alh' # show hidden files
 alias ls='ls -aFh --color=always' # add colors and file type extensions
 alias lx='ls -lXBh' # sort by extension
@@ -149,11 +154,11 @@ alias ipview="netstat -anpl | grep :80 | awk {'print \$5'} | cut -d\":\" -f1 | s
 # Show open ports
 alias openports='netstat -nape --inet'
 
-# Alias's for safe and forced reboots
+# Aliases for safe and forced reboots
 alias rebootsafe='sudo shutdown -r now'
 alias rebootforce='sudo shutdown -r -n now'
 
-# Alias's to show disk space and space used in a folder
+# Aliases to show disk space and space used in a folder
 alias diskspace="du -S | sort -n -r |more"
 alias folders='du -h --max-depth=1'
 alias folderssort='find . -maxdepth 1 -type d -print0 | xargs -0 du -sk | sort -rn'
@@ -161,7 +166,7 @@ alias tree='tree -CAhF --dirsfirst'
 alias treed='tree -CAFd'
 alias mountedinfo='df -hT'
 
-# Alias's for archives
+# Aliases for archives
 alias mktar='tar -cvf'
 alias mkbz2='tar -cvjf'
 alias mkgz='tar -cvzf'
@@ -173,7 +178,7 @@ alias ungz='tar -xvzf'
 alias logs="sudo find /var/log -type f -exec file {} \; | grep 'text' | cut -d' ' -f1 | sed -e's/:$//g' | grep -v '[0-9]$' | xargs tail -f"
 
 #==============================================
-# SPECIAL FUNCTIONS
+# SCRIPPIES
 
 # Extracts any archive(s) (if unp isn't installed)
 extract () {
@@ -419,7 +424,7 @@ function whatsmyip ()
 }
 
 
-# For some reason, rot13 pops up everywhere
+# ROT 13 scrippie :)
 rot13 () {
         if [ $# -eq 0 ]; then
                 tr '[a-m][n-z][A-M][N-Z]' '[n-z][a-m][N-Z][A-M]'
@@ -443,12 +448,10 @@ trim()
 alias cpu="grep 'cpu ' /proc/stat | awk '{usage=(\$2+\$4)*100/(\$2+\$4+\$5)} END {print usage}' | awk '{printf(\"%.1f\n\", \$1)}'"
 function __setprompt
 {
-        local LAST_COMMAND=$? # Must come first!
-
-TERMWIDTH=${COLUMNS}
- 
-#   Calculate the width of the prompt:
- 
+        # Must come first!
+        local LAST_COMMAND=$? 
+        TERMWIDTH=${COLUMNS}
+         #   Calculate the width of the prompt: 
         hostnam=$(echo -n $HOSTNAME | sed -e "s/[\.].*//")
         #   "whoami" and "pwd" include a trailing newline
         usernam=$(whoami)
@@ -545,7 +548,7 @@ TERMWIDTH=${COLUMNS}
         # Network Connections (for a server - comment out for non-server)
         #PS1+="\[${DARKGRAY}\]:\[${MAGENTA}\]Net $(awk 'END {print NR}' /proc/net/tcp)"
 
-        PS1+="\[${DARKGRAY}\])-"
+        #PS1+="\[${DARKGRAY}\])-"
 
         # User and server
         local SSH_IP=`echo $SSH_CLIENT | awk '{ print $1 }'`
