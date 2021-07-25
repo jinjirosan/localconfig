@@ -554,13 +554,13 @@ function __setprompt
         local SSH_IP=`echo $SSH_CLIENT | awk '{ print $1 }'`
         local SSH2_IP=`echo $SSH2_CLIENT | awk '{ print $1 }'`
         if [ $SSH2_IP ] || [ $SSH_IP ] ; then
-                PS1+="(\[${GREEN}\]\u@\h"
+                PS1+="\[${DARKGRAY}\](\[${GREEN}\]\u@\h\[${DARKGRAY}\])"
         else
-                PS1+="(\[${RED}\]\u"
+                PS1+="\[${DARKGRAY}\](\[${RED}\]\u\[${DARKGRAY}\])"
         fi
 
         # Current directory
-        PS1+="\[${DARKGRAY}\]:\[${fill}\]:\[${DARKGRAY}\]:\[${BROWN}\]\w\[${DARKGRAY}\])-"
+        PS1+="\[${DARKGRAY}\]\[${fill}\]\[${DARKGRAY}\](\[${BROWN}\]\w\[${DARKGRAY}\])-"
 
         # Total size of files in current directory
         PS1+="(\[${GREEN}\]$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')\[${DARKGRAY}\]:"
