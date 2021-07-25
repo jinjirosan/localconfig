@@ -568,7 +568,7 @@ function __setprompt
         # Number of files
         PS1+="\[${GREEN}\]\$(/bin/ls -A -1 | /usr/bin/wc -l)\[${DARKGRAY}\])"
 
-        # Skip to the next line
+        # Continue on a new line
         PS1+="\n"
 
         if [[ $EUID -ne 0 ]]; then
