@@ -18,7 +18,7 @@ fi
 #==============================================
 # EXPORTS
 
-# Test of bash is in interactive mode. If it is, then some exports are different
+# Test if bash is in interactive mode. If it is, then some exports are different
 iacheck=$(expr index "$-" i)
 
 # Disable the bell
@@ -31,15 +31,15 @@ export HISTSIZE=500
 # Set VIM as default editor
 export EDITOR=vim
 
-# Don't put duplicate lines in the history and do not add lines that start with a space
+# Don't put duplicate lines in the history and don't add lines that start with a space
 export HISTCONTROL=erasedups:ignoredups:ignorespace
-
-# Check the window size after each command and, if necessary, update the values of LINES and COLUMNS
-shopt -s checkwinsize
 
 # Append to history instead of overwriting it. Every new terminal, we have the old session history
 shopt -s histappend
 PROMPT_COMMAND='history -a'
+
+# Check the window size after each command and, if necessary, update the values of LINES and COLUMNS
+shopt -s checkwinsize
 
 # Ignore case on auto-completion
 # Note: bind used instead of sticking these in .inputrc
