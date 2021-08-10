@@ -372,7 +372,7 @@ ver ()
         fi
 }
 
-# Automatically install the needed support files for this .bashrc file. Remember to run 'updatedb' after
+# Automatically install the needed support files for this .bashrc file. Remember to run 'updatedb' after for locate.
 install_bashrc_support ()
 {
         local dtype
