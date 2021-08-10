@@ -1,7 +1,7 @@
 #!/bin/bash
 #==============================================
 # Jin's .bashrc 2010-2021
-# version    : 0.8.3
+# version    : 0.8.4
 
 # Source global definitions
 if [ -f /etc/bashrc ]; then
@@ -372,19 +372,19 @@ ver ()
         fi
 }
 
-# Automatically install the needed support files for this .bashrc file
+# Automatically install the needed support files for this .bashrc file. Remember to run 'updatedb' after
 install_bashrc_support ()
 {
         local dtype
         dtype=$(distribution)
 
         if [ $dtype == "redhat" ]; then
-                sudo yum install multitail tree screen vim-gtk htop 
+                sudo yum install multitail tree screen vim-gtk htop net-tools locate
         elif [ $dtype == "suse" ]; then
                 sudo zypper install multitail
                 sudo zypper install tree
         elif [ $dtype == "debian" ]; then
-                sudo apt-get install multitail tree screen vim-gtk htop
+                sudo apt-get install multitail tree screen vim-gtk htop net-tools locate
         elif [ $dtype == "gentoo" ]; then
                 sudo emerge multitail
                 sudo emerge tree
