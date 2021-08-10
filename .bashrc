@@ -1,7 +1,7 @@
 #!/bin/bash
 #==============================================
 # Jin's .bashrc 2010-2021
-# version    : 0.8.2
+# version    : 0.8.3
 
 # Source global definitions
 if [ -f /etc/bashrc ]; then
@@ -17,6 +17,9 @@ fi
 
 #==============================================
 # EXPORTS
+
+# Skip everything on SCP connection 
+[[ $- == *i* ]] || return
 
 # Test if bash is in interactive mode. If it is, then some exports are different
 iacheck=$(expr index "$-" i)
