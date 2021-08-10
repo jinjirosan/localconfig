@@ -1,7 +1,7 @@
 #!/bin/bash
 #==============================================
 # Jin's .bashrc 2010-2021
-# version    : 0.8.4
+# version    : 0.8.5
 
 # Source global definitions
 if [ -f /etc/bashrc ]; then
@@ -15,8 +15,7 @@ elif [ -f /etc/bash_completion ]; then
         . /etc/bash_completion
 fi
 
-#==============================================
-# EXPORTS
+#=================== Exports =========================== {{{1
 
 # Skip everything on SCP connection 
 [[ $- == *i* ]] || return
@@ -66,8 +65,7 @@ export LESS_TERMCAP_so=$'\E[01;44;33m'
 export LESS_TERMCAP_ue=$'\E[0m'
 export LESS_TERMCAP_us=$'\E[01;32m'
 
-#==============================================
-# ALIASES
+#=================== Aliasses =========================== {{{1
 
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
@@ -180,8 +178,7 @@ alias ungz='tar -xvzf'
 # Show all logs in /var/log
 alias logs="sudo find /var/log -type f -exec file {} \; | grep 'text' | cut -d' ' -f1 | sed -e's/:$//g' | grep -v '[0-9]$' | xargs tail -f"
 
-#==============================================
-# SCRIPPIES
+#================== Scrippies ============================ {{{1
 
 # Extracts any archive(s) (if unp isn't installed)
 extract () {
@@ -445,8 +442,7 @@ trim()
         echo -n "$var"
 }
 
-#==============================================
-# Set the prompt (full width line + info)
+#================== Prompt (full width line + info) =============== {{{1
 
 alias cpu="grep 'cpu ' /proc/stat | awk '{usage=(\$2+\$4)*100/(\$2+\$4+\$5)} END {print usage}' | awk '{printf(\"%.1f\n\", \$1)}'"
 function __setprompt
@@ -591,8 +587,7 @@ function __setprompt
 }
 PROMPT_COMMAND='__setprompt'
 
-#==============================================
-# Set the bash login information display
+#=============== BASH login info ========================== {{{1
 
 echo ""                         # for spacing
 w                               # uptime information and who is logged in
