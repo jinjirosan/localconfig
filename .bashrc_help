@@ -1,0 +1,15 @@
+Keymap - control key CTRL-T
+
+<number>    Change to specific loaded terminal (see bottom status line
+J           Message Line] hardstatus: [a]lwayslastline [i]gnore [l]astline [m]essage / caption: al[w]ays [s]plitonly / [.] restore all [_] ignore all
+w           Show window list of pre-loaded terminals and their ID's (selectable list)
+ctrl-w      Window list , sorted by most recently used
+\           Fully exit screen environment and kill-all windows
+k,j,t,b,h,l Move around windows k: up, j: down, t: top, b: bottom, h: left, l: right
+<TAB>       Jump to the next window
+ctrl-e      switch window encoding to: [u]tf8 [e]ucjp [s]jis [j]is / with env [U]tf8 [E]ucjp [S]jis
+.           Reload .screenrc
+y           Change window layout [0]vertical, [1]horizontal, [2]single, [3]default
+D           Detach screen
+o           Options menu: a]ltscreen [b]ce [h]ardcopy_append [m]ousetrack [w]rap [v]bell
+o m o       Turn mousetracking on. This allows scrolling in windows using ctrl-t ESC , and stops scrolling outside of the screen windows.
