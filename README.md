@@ -35,6 +35,7 @@ Change the ** to your installed version of VIM. Copy the badwolf.vim to colors/
       cp colors/badwolf.vim .
 
 ### vim plugin
+Make sure to update from VIM-AIRLINE below when using VIM82 and up
 
 I'm using the airline plugin, see <https://github.com/vim-airline/vim-airline>
 Change the ** to your installed version of VIM. Copy the airline files to plugin/
@@ -46,5 +47,5 @@ Change the ** to your installed version of VIM. Copy the airline files to plugin
 
 ### vim autoload
 
-      /usr/local/share/vim/vim**/autoload or /usr/local/share/vim/vim**/autoload
+      /usr/local/share/vim/vim**/autoload or /usr/share/vim/vim**/autoload
       cp -r autoload/ .
