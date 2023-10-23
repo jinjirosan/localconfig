@@ -14,8 +14,12 @@ Package version: 2.1 (2023 update)
 Deploy a fresh new target system with one of the three OS's. Jsut a base install but make sure to check for Python.
 Have your own 'control' system with Ansible installed. Fetch this repo.
 
-Change the hosts.ini to contain the target systems IP and standard user (playbook will take care of sudoers)
-Change user_vars.yml to contain the name of that standard user on the target system
+- Create a hosts.ini (see below for placement to contain the target systems IP and standard user (playbook will take care of sudoers).
+hosts.ini format:
+> [<inventory name>]
+> xxx.xxx.xxx.xxx ansible_user=<name> ansible_python_interpreter=/usr/bin/python3
+
+- Change user_vars.yml to contain the name of that standard user on the target system
 
 ## Structure
 
