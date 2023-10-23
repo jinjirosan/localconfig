@@ -1,0 +1,117 @@
+---
+- name: Local Configuration Setup
+  hosts: fresh_systems
+  become: yes
+  gather_facts: yes
+  vars:
+    debian_ubuntu_packages:
+      - vim-gtk
+      - screen
+      - curl
+
+  tasks:
+    - name: Debug the lsb fact
+      debug:
+        var: ansible_facts['lsb']
+
+    - name: Set ansible_distribution based on lsb
+      set_fact:
+        ansible_distribution: "{{ ansible_facts['lsb']['id'] }}"
+      when: ansible_facts['lsb']['id'] in ['Debian', 'Ubuntu']
+
+    - name: Determine the package manager for Debian/Ubuntu
+      set_fact:
+        pkg_manager: apt
+      when: "'Debian' in ansible_facts['lsb']['id'] or 'Ubuntu' in ansible_facts['lsb']['id']"
+
+    - name: Install essential tools for Debian/Ubuntu configurations
+      apt:
+        name: "{{ debian_ubuntu_packages }}"
+        state: present
+      when: pkg_manager == "apt"
+
+    - name: Determine Vim version on Debian/Ubuntu
+      shell: "dpkg -l vim-runtime | awk '/^ii/{print $3}' | cut -d: -f2 | cut -d. -f1,2"
+      register: vim_version_result
+      changed_when: false
+      when: pkg_manager == "apt"
+
+    - set_fact:
+        vim_version: "{{ vim_version_result.stdout | replace('.', '') }}"
+      when: pkg_manager == "apt"
+
+    - name: Display detected Vim version
+      debug:
+        var: vim_version
+      
+    - name: Copy configuration files to home directory for the ansible_user
+      copy:
+        src: "{{ playbook_dir }}/../files/{{ item }}"
+        dest: "~{{ ansible_user }}/{{ item }}"
+      loop:
+        - .vimrc
+        - .screenrc
+        - .bashrc
+        - .curlrc
+      become: no
+
+    - name: Create .vim directory under home for the ansible_user
+      file:
+        path: "~{{ ansible_user }}/.vim"
+        state: directory
+      become: no
+
+    - name: Copy configuration files to home directory for the root user
+      copy:
+        src: "{{ playbook_dir }}/../files/{{ item }}"
+        dest: "~/{{ item }}"
+      loop:
+        - .vimrc
+        - .screenrc
+        - .bashrc
+        - .curlrc
+
+    - name: Create .vim directory under home for the root user
+      file:
+        path: "~/.vim"
+        state: directory
+
+    - name: Ensure Vim colors directory exists
+      file:
+        path: "/usr/share/vim/vim{{ vim_version }}/colors"
+        state: directory
+      when: pkg_manager == "apt"
+
+    - name: Copy badwolf.vim color theme to appropriate directory
+      copy:
+        src: "{{ playbook_dir }}/../files/colors/badwolf.vim"
+        dest: "/usr/share/vim/vim{{ vim_version }}/colors/badwolf.vim"
+      when: pkg_manager == "apt"
+
+    - name: Ensure Vim plugin directory exists
+      file:
+        path: "/usr/share/vim/vim{{ vim_version }}/plugin"
+        state: directory
+      when: pkg_manager == "apt"
+
+    - name: Copy airline plugin files to appropriate directory
+      copy:
+        src: "{{ playbook_dir }}/../files/plugin/{{ item }}"
+        dest: "/usr/share/vim/vim{{ vim_version }}/plugin/{{ item }}"
+      loop:
+        - airline.vim
+        - airline-themes.vim
+      when: pkg_manager == "apt"
+
+    - name: Ensure Vim autoload directory exists
+      file:
+        path: "/usr/share/vim/vim{{ vim_version }}/autoload"
+        state: directory
+      when: pkg_manager == "apt"
+
+    - name: Copy vim autoload directory to appropriate location
+      copy:
+        src: "{{ playbook_dir }}/../files/autoload/"
+        dest: "/usr/share/vim/vim{{ vim_version }}/autoload/"
+      when: pkg_manager == "apt"
+
