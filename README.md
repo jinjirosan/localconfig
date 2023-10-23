@@ -82,7 +82,7 @@ localconfig/
 Since this is the initial setup and you're using password authentication to set up the key-based authentication, you'd use the `--ask-pass` option to enter the ansible_user password (the user on the target system):
 
 
-> ansible-playbook -i hosts.ini playbooks/ssh_setup.yml --ask-pass
+> ansible-playbook -i hosts.ini playbooks/1_ssh_setup.yml --ask-pass
 
 
 This will prompt you for the SSH password for the hosts you're connecting to.
