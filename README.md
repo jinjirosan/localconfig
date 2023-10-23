@@ -11,7 +11,7 @@ Everything is now in Ansbile Playbooks and the target systems can be Debian, Ubu
 Package version: 2.1 (2023 update)
 
 ## Pre-requisites
-- Deploy a fresh new target system with one of the three OS's. Jsut a base install but make sure to check for Python.
+- Deploy a fresh new target system with one of the three OS's. Just a base install but make sure to check Python is installed. If it's Python3, note the path (which Python) to add to the hosts.ini later.
 Have your own 'control' system with Ansible installed. Fetch this repo.
 
 - Create a hosts.ini (see below for placement to contain the target systems IP and standard user (playbook will take care of sudoers).
@@ -20,6 +20,9 @@ Have your own 'control' system with Ansible installed. Fetch this repo.
 <a href="http://xxx.xxx.xxx.xxx">xxx.xxx.xxx.xxx</a> ansible_user=&lt;name&gt; ansible_python_interpreter=/usr/bin/python3</p>
 
 - Change user_vars.yml to contain the name of that standard user on the target system
+
+### Note
+in RHEL there is no screen, they depprecated it in favor of tmux. Still need to convert my .screenrc to tmux config.
 
 ## Structure
 
