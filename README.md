@@ -29,16 +29,16 @@ There are three playbooks that need to be run sequentially the 1st time. Each wi
 - `2_tools_setup.yml` : this will install all the tools
 - `3_localconfig_setup.yml` : this will deploy all the configuration files into the correct location. Also the VIM theme and colorscheme I like (<https://github.com/sjl/badwolf> and <https://github.com/vim-airline/vim-airline>). Currently the files are .bashrc , .vimrc , .screenrc and .curlrc
 
-<p class="has-line-data" data-line-start="0" data-line-end="41">localconfig/<br>
-│<br>
-├── group_vars/<br>
-│ └── user_vars.yml<br>
-|<br>
-├── playbooks/<br>
-│   ├── 1_ssh_setup.yml<br>
-│   ├── 2_tools_setup.yml<br>
-│   └── 3_localconfig_setup.yml<br>
-│<br>
+><p class="has-line-data" data-line-start="0" data-line-end="41">localconfig/<br>
+>│<br>
+>├── group_vars/<br>
+>│ └── user_vars.yml<br>
+>|<br>
+>├── playbooks/<br>
+>│   ├── 1_ssh_setup.yml<br>
+>│   ├── 2_tools_setup.yml<br>
+>│   └── 3_localconfig_setup.yml<br>
+>│<br>
 ├── discovered_ssh_keys/<br>
 │   ├── host1_keys.txt<br>
 │   ├── host2_keys.txt<br>
