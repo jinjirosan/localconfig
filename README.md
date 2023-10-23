@@ -15,9 +15,9 @@ Deploy a fresh new target system with one of the three OS's. Jsut a base install
 Have your own 'control' system with Ansible installed. Fetch this repo.
 
 - Create a hosts.ini (see below for placement to contain the target systems IP and standard user (playbook will take care of sudoers).
-hosts.ini format:
-> [<inventory name>]
-> xxx.xxx.xxx.xxx ansible_user=<name> ansible_python_interpreter=/usr/bin/python3
+### hosts.ini format:
+<p class="has-line-data" data-line-start="0" data-line-end="2">[&lt;inventory name&gt;]<br>
+<a href="http://xxx.xxx.xxx.xxx">xxx.xxx.xxx.xxx</a> ansible_user=&lt;name&gt; ansible_python_interpreter=/usr/bin/python3</p>
 
 - Change user_vars.yml to contain the name of that standard user on the target system
 
