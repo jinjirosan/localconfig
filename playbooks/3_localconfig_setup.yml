@@ -14,15 +14,35 @@
       debug:
         var: ansible_facts['lsb']
 
+    - name: Default package manager to unknown
+      set_fact:
+        pkg_manager: "unknown"
+
     - name: Set ansible_distribution based on lsb
       set_fact:
         ansible_distribution: "{{ ansible_facts['lsb']['id'] }}"
-      when: ansible_facts['lsb']['id'] in ['Debian', 'Ubuntu']
+      when: 
+        - "'lsb' in ansible_facts"
+        - "'id' in ansible_facts['lsb']"
+        - "ansible_facts['lsb']['id'] in ['Debian', 'Ubuntu']"
 
     - name: Determine the package manager for Debian/Ubuntu
       set_fact:
         pkg_manager: apt
-      when: "'Debian' in ansible_facts['lsb']['id'] or 'Ubuntu' in ansible_facts['lsb']['id']"
+      when: 
+        - "'lsb' in ansible_facts"
+        - "'id' in ansible_facts['lsb']"
+        - "'Debian' in ansible_facts['lsb']['id'] or 'Ubuntu' in ansible_facts['lsb']['id']"
+
+    - name: Check for RHEL release file
+      stat:
+        path: /etc/redhat-release
+      register: rhel_release_check
+
+    - name: Set pkg_manager for RHEL based on release file
+      set_fact:
+        pkg_manager: yum
+      when: rhel_release_check.stat.exists
 
     - name: Install essential tools for Debian/Ubuntu configurations
       apt:
@@ -43,7 +63,7 @@
     - name: Display detected Vim version
       debug:
         var: vim_version
-      
+
     - name: Copy configuration files to home directory for the ansible_user
       copy:
         src: "{{ playbook_dir }}/../files/{{ item }}"
@@ -114,4 +134,3 @@
         src: "{{ playbook_dir }}/../files/autoload/"
         dest: "/usr/share/vim/vim{{ vim_version }}/autoload/"
       when: pkg_manager == "apt"
-
