@@ -89,7 +89,7 @@ This will prompt you for the SSH password for the hosts you're connecting to.
 
 2. **To run the `2_tools_setup.yml` playbook:**
 
-Since this needs elevated privileges to run the package installs we need to add the ansible_user to sudoers (ansible_user is in a separate user_vars.yml). Use the `--ask-become-pass` and enter the ROOT password option:
+Since this needs elevated privileges to run the package installs we need to add the ansible_user to sudoers (ansible_user is in a separate user_vars.yml). Use the `--ask-become-pass` and enter the ROOT password when asked:
 
 
 > ansible-playbook -i hosts.ini playbooks/2_tools_setup.yml --ask-become-pass
