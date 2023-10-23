@@ -11,7 +11,7 @@ Everything is now in Ansbile Playbooks and the target systems can be Debian, Ubu
 Package version: 2.1 (2023 update)
 
 ## Pre-requisites
-Deploy a fresh new target system with one of the three OS's. Jsut a base install but make sure to check for Python.
+- Deploy a fresh new target system with one of the three OS's. Jsut a base install but make sure to check for Python.
 Have your own 'control' system with Ansible installed. Fetch this repo.
 
 - Create a hosts.ini (see below for placement to contain the target systems IP and standard user (playbook will take care of sudoers).
