@@ -29,47 +29,49 @@ There are three playbooks that need to be run sequentially the 1st time. Each wi
 - `2_tools_setup.yml` : this will install all the tools
 - `3_localconfig_setup.yml` : this will deploy all the configuration files into the correct location. Also the VIM theme and colorscheme I like (<https://github.com/sjl/badwolf> and <https://github.com/vim-airline/vim-airline>). Currently the files are .bashrc , .vimrc , .screenrc and .curlrc
 
-><p class="has-line-data" data-line-start="0" data-line-end="41">localconfig/<br>
->│<br>
->├── group_vars/<br>
->│ └── user_vars.yml<br>
->|<br>
->├── playbooks/<br>
->│   ├── 1_ssh_setup.yml<br>
->│   ├── 2_tools_setup.yml<br>
->│   └── 3_localconfig_setup.yml<br>
->│<br>
-├── discovered_ssh_keys/<br>
-│   ├── host1_keys.txt<br>
-│   ├── host2_keys.txt<br>
-│   └── … (other files containing lists of public SSH keys from target systems)<br>
-│<br>
-├── roles/<br>
-│   ├── role1/<br>
-│   │   ├── tasks/<br>
-│   │   ├── handlers/<br>
-│   │   └── … (other directories/files related to this role)<br>
-│   └── … (other roles)<br>
-│<br>
-├── files/<br>
-│   ├── .vimrc<br>
-│   ├── .screenrc<br>
-│   ├── .bashrc<br>
-│   ├── .curlrc<br>
-│   │<br>
-│   ├── colors/<br>
-│   │   └── badwolf.vim<br>
-│   │<br>
-│   ├── plugin/<br>
-│   │   ├── airline.vim<br>
-│   │   └── airline-themes.vim<br>
-│   │<br>
-│   └── autoload/<br>
-│       └── … (all the autoload files and directories for vim)<br>
-│<br>
-├── ansible.cfg<br>
-│<br>
-└── hosts.ini</p>
+```
+localconfig/
+│
+├── group_vars/ 
+│ └── user_vars.yml
+|
+├── playbooks/
+│   ├── 1_ssh_setup.yml
+│   ├── 2_tools_setup.yml
+│   └── 3_localconfig_setup.yml
+│
+├── discovered_ssh_keys/
+│   ├── host1_keys.txt
+│   ├── host2_keys.txt
+│   └── ... (other files containing lists of public SSH keys from target systems)
+│
+├── roles/
+│   ├── role1/
+│   │   ├── tasks/
+│   │   ├── handlers/
+│   │   └── ... (other directories/files related to this role)
+│   └── ... (other roles)
+│
+├── files/
+│   ├── .vimrc
+│   ├── .screenrc
+│   ├── .bashrc
+│   ├── .curlrc
+│   │
+│   ├── colors/
+│   │   └── badwolf.vim
+│   │
+│   ├── plugin/
+│   │   ├── airline.vim
+│   │   └── airline-themes.vim
+│   │
+│   └── autoload/
+│       └── ... (all the autoload files and directories for vim)
+│
+├── ansible.cfg
+│
+└── hosts.ini
+```
 
 
 
