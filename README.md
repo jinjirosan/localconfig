@@ -25,6 +25,50 @@ There are three playbooks that need to be run sequentially the 1st time. Each wi
 - `2_tools_setup.yml` : this will install all the tools
 - `3_localconfig_setup.yml` : this will deploy all the configuration files into the correct location. Also the VIM theme and colorscheme I like (<https://github.com/sjl/badwolf> and <https://github.com/vim-airline/vim-airline>). Currently the files are .bashrc , .vimrc , .screenrc and .curlrc
 
+localconfig/
+│
+├── group_vars/ 
+│ └── user_vars.yml
+|
+├── playbooks/
+│   ├── 1_ssh_setup.yml
+│   ├── 2_tools_setup.yml
+│   └── 3_localconfig_setup.yml
+│
+├── discovered_ssh_keys/
+│   ├── host1_keys.txt
+│   ├── host2_keys.txt
+│   └── ... (other files containing lists of public SSH keys from target systems)
+│
+├── roles/
+│   ├── role1/
+│   │   ├── tasks/
+│   │   ├── handlers/
+│   │   └── ... (other directories/files related to this role)
+│   └── ... (other roles)
+│
+├── files/
+│   ├── .vimrc
+│   ├── .screenrc
+│   ├── .bashrc
+│   ├── .curlrc
+│   │
+│   ├── colors/
+│   │   └── badwolf.vim
+│   │
+│   ├── plugin/
+│   │   ├── airline.vim
+│   │   └── airline-themes.vim
+│   │
+│   └── autoload/
+│       └── ... (all the autoload files and directories for vim)
+│
+├── ansible.cfg
+│
+└── hosts.ini
+
+
+
 ## Installation
 
 1. **To run the `1_ssh_setup.yml` playbook:**
