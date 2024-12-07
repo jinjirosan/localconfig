@@ -96,6 +96,7 @@ For convenience, I've included a bash script to deploy on a local system. So, be
 - Ensure that the roles you want to run are included in the `available_roles` list in `site.yml`.
 - The playbook validates the roles specified in `selected_roles` to avoid errors.
 - Change all.yml to contain the name of the standard user (which will be the ansible_user) on the target system
+   - ansible_user: <add_local_user>
 
 ### Note
 in RHEL there is no screen, they depprecated it in favor of tmux. Still need to convert my .screenrc to tmux config for RHEL usage only.
