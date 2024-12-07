@@ -1,5 +1,5 @@
 
-ansible_user: rayf
+ansible_user: <add_local_user>
 pkg_manager: "{{ 'apt' if ansible_facts['os_family'] == 'Debian' else 'yum' }}"
 debian_ubuntu_packages:
   - sudo
