@@ -2,7 +2,6 @@
 ---
 - name: Initial Setup
   hosts: all
-  gather_facts: no  # Avoid fact gathering until privilege escalation is resolved
   tasks:
     - name: Ensure ansible_user is defined
       ansible.builtin.set_fact:
