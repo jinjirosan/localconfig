@@ -1,0 +1,56 @@
+
+---
+# SSH Setup Role
+
+- name: Check if system is Debian/Ubuntu
+  ansible.builtin.command: cat /etc/os-release
+  register: os_release
+  changed_when: false
+
+- name: Set fact if the system is Debian/Ubuntu
+  ansible.builtin.set_fact:
+    is_debian_or_ubuntu: "{{ 'ID=debian' in os_release.stdout or 'ID=ubuntu' in os_release.stdout }}"
+
+- name: Ensure SSH key is present on control machine
+  ansible.builtin.openssh_keypair:
+    path: "~/.ssh/id_rsa"
+    state: present
+    type: rsa
+    size: 2048
+  delegate_to: localhost
+
+- name: Install sshpass for password-based SSH setup (Debian/Ubuntu)
+  ansible.builtin.package:
+    name: sshpass
+    state: present
+  when: is_debian_or_ubuntu
+  delegate_to: localhost
+
+- name: Fetch the generated public SSH key from control machine
+  ansible.builtin.slurp:
+    src: "~/.ssh/id_rsa.pub"
+  delegate_to: localhost
+  register: ssh_key_content
+
+- name: Add the SSH key to the remote hosts
+  ansible.builtin.authorized_key:
+    user: "{{ ansible_user }}"
+    state: present
+    key: "{{ ssh_key_content.content | b64decode }}"
+
+- name: Get existing public keys from target systems
+  ansible.builtin.command: cat ~/.ssh/authorized_keys
+  register: existing_keys
+  ignore_errors: true
+
+- name: Ensure discovered_ssh_keys directory exists on control machine
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../discovered_ssh_keys"
+    state: directory
+  delegate_to: localhost
+
+- name: Store the list of keys for each host
+  ansible.builtin.copy:
+    content: "{{ existing_keys.stdout | default('') }}"
+    dest: "{{ playbook_dir }}/../discovered_ssh_keys/{{ inventory_hostname }}_keys.txt"
+  delegate_to: localhost

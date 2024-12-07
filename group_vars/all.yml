@@ -1,0 +1,16 @@
+
+ansible_user: rayf
+pkg_manager: "{{ 'apt' if ansible_facts['os_family'] == 'Debian' else 'yum' }}"
+debian_ubuntu_packages:
+  - sudo
+  - vim
+  - htop
+  - screen
+  - net-tools
+  - git
+  - cifs-utils
+  - gnupg
+  - curl
+  - gcc
+  - mlocate
+

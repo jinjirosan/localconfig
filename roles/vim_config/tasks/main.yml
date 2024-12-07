@@ -1,0 +1,88 @@
+
+---
+# Vim Configuration Setup
+
+# Detect Vim Version Dynamically
+- name: Detect Vim version
+  ansible.builtin.shell: "vim --version | head -n 1 | awk '{print $5}'"
+  register: vim_version_result
+  changed_when: false
+
+- name: Set Vim version fact
+  ansible.builtin.set_fact:
+    vim_version: "{{ vim_version_result.stdout | regex_replace('\\.', '') }}"
+
+# Copy Configuration Files to User's Home Directory
+- name: Copy configuration files to user's home directory
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../files/{{ item }}"
+    dest: "~{{ ansible_user }}/{{ item }}"
+  loop:
+    - .vimrc
+    - .screenrc
+    - .bashrc
+    - .curlrc
+
+- name: Ensure .vim directory exists in user's home
+  ansible.builtin.file:
+    path: "~{{ ansible_user }}/.vim"
+    state: directory
+
+# Copy Configuration Files to Root's Home Directory
+- name: Copy configuration files to root's home directory
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../files/{{ item }}"
+    dest: "/root/{{ item }}"
+  loop:
+    - .vimrc
+    - .screenrc
+    - .bashrc
+    - .curlrc
+  become: yes
+
+- name: Ensure .vim directory exists in root's home
+  ansible.builtin.file:
+    path: "/root/.vim"
+    state: directory
+  become: yes
+
+# Configure Vim Colors, Plugins, and Autoload
+- name: Ensure Vim colors directory exists
+  ansible.builtin.file:
+    path: "/usr/share/vim/vim{{ vim_version }}/colors"
+    state: directory
+  become: yes
+
+- name: Copy badwolf.vim color theme to Vim colors directory
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../files/colors/badwolf.vim"
+    dest: "/usr/share/vim/vim{{ vim_version }}/colors/badwolf.vim"
+  become: yes
+
+- name: Ensure Vim plugin directory exists
+  ansible.builtin.file:
+    path: "/usr/share/vim/vim{{ vim_version }}/plugin"
+    state: directory
+  become: yes
+
+- name: Copy Vim plugin files
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../files/plugin/{{ item }}"
+    dest: "/usr/share/vim/vim{{ vim_version }}/plugin/{{ item }}"
+  loop:
+    - airline.vim
+    - airline-themes.vim
+  become: yes
+
+- name: Ensure Vim autoload directory exists
+  ansible.builtin.file:
+    path: "/usr/share/vim/vim{{ vim_version }}/autoload"
+    state: directory
+  become: yes
+
+- name: Copy autoload files for Vim
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../files/autoload/"
+    dest: "/usr/share/vim/vim{{ vim_version }}/autoload/"
+    remote_src: yes
+  become: yes

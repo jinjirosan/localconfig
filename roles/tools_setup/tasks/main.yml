@@ -1,0 +1,92 @@
+
+---
+# Tools Setup Role
+
+# OS Detection and Package Manager Setup
+- name: Detect if system is Debian/Ubuntu
+  ansible.builtin.set_fact:
+    pkg_manager: "apt"
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Detect if system is RHEL-based
+  ansible.builtin.stat:
+    path: /etc/redhat-release
+  register: rhel_release_check
+
+- name: Set pkg_manager to yum/dnf for RHEL
+  ansible.builtin.set_fact:
+    pkg_manager: "yum"
+  when: rhel_release_check.stat.exists
+
+# Install Sudo if Missing (Debian/Ubuntu)
+- name: Ensure sudo is installed on Debian/Ubuntu
+  ansible.builtin.package:
+    name: sudo
+    state: present
+  when: pkg_manager == "apt"
+  become: yes
+
+# Check if ansible_user is already in sudoers
+- name: Check if ansible_user is already in sudoers
+  ansible.builtin.shell: grep -Fxq "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL" /etc/sudoers
+  register: sudoers_check
+  become: yes
+  failed_when: sudoers_check.rc not in [0, 1]
+  changed_when: sudoers_check.rc == 1
+
+# Add ansible_user to sudoers with NOPASSWD
+- name: Add ansible_user to sudoers with NOPASSWD
+  ansible.builtin.shell: |
+    echo "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL" | sudo EDITOR='tee -a' visudo
+  become: yes
+  become_user: root
+  when: sudoers_check.rc == 1
+
+# Switch back to ansible_user
+- name: Continue tasks as ansible_user
+  ansible.builtin.command: whoami
+  become: yes
+  become_user: "{{ ansible_user }}"
+
+# Install Essential Tools (Debian/Ubuntu)
+- name: Install essential tools for Debian/Ubuntu
+  ansible.builtin.package:
+    name: "{{ debian_ubuntu_packages }}"
+    state: present
+  when: pkg_manager == "apt"
+  become: yes
+
+# Install Essential Tools (RHEL)
+- name: Install essential tools for RHEL
+  ansible.builtin.package:
+    name: "{{ rhel_packages }}"
+    state: present
+  when: pkg_manager == "yum"
+
+# Check Installed Package Status (Debian/Ubuntu)
+- name: Check package status on Debian/Ubuntu
+  ansible.builtin.command: dpkg -l {{ item }}
+  register: package_check
+  changed_when: false
+  loop: "{{ debian_ubuntu_packages }}"
+  when: pkg_manager == "apt"
+
+# Check Installed Package Status (RHEL)
+- name: Check package status on RHEL
+  ansible.builtin.command: dnf list installed {{ item }}
+  register: package_check_rhel
+  changed_when: false
+  failed_when: "item not in package_check_rhel.stdout"
+  loop: "{{ rhel_packages }}"
+  when: pkg_manager == "yum"
+
+# Debugging and Status Reporting
+- name: Display package statuses (Debian/Ubuntu)
+  ansible.builtin.debug:
+    var: package_check.results
+  when: pkg_manager == "apt"
+
+- name: Display package statuses (RHEL)
+  ansible.builtin.debug:
+    var: package_check_rhel
+  when: pkg_manager == "yum"

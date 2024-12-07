@@ -1,0 +1,30 @@
+
+---
+- name: Initial Setup
+  hosts: all
+  gather_facts: no  # Avoid fact gathering until privilege escalation is resolved
+  tasks:
+    - name: Ensure ansible_user is defined
+      ansible.builtin.set_fact:
+        ansible_user: "{{ lookup('env', 'USER') }}"
+
+    - name: Check if ansible_user is in sudoers
+      ansible.builtin.shell: grep -q "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL" /etc/sudoers
+      register: sudoers_check
+      failed_when: sudoers_check.rc not in [0, 1]
+      become: true
+
+    - name: Add ansible_user to sudoers
+      ansible.builtin.shell: |
+        echo "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers
+      become: true
+      when: sudoers_check.rc == 1
+
+- name: Setup All Systems
+  hosts: all
+  gather_facts: yes
+  roles:
+    - ssh_setup
+    - tools_setup
+    - vim_config
+
