@@ -10,9 +10,13 @@ Everything is now in an Ansible Playbook with roles and the target systems can b
 
 Package version: 3.2.1 (2024/12 update)
 
-## Playbook: `site.yml`
+## Instructions
+Two items are not included in the git which need to be added:
+- hosts.ini file
+- discovered_ssh_keys directory
 
-### Features:
+### Main Playbook: `site.yml`
+#### Features:
 1. **Dynamic Role Execution:**
    - Executes all roles in the `available_roles` list by default.
    - Allows users to specify which roles to execute.
@@ -76,7 +80,9 @@ To execute specific roles, use the `selected_roles` variable:
   ```
 
 #### setup_local.sh
+
 For convenience, I've included a bash script to deploy on a local system. So, besides ansible install and Python3 install, the only thing to do is 'git clone' this repo, add the ansible_user to sudoers en run the setup_local.sh
+
 ---
 
 ### Adding New Roles:
