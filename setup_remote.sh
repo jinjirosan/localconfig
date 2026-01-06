@@ -47,7 +47,7 @@ select_target_user() {
     echo ""
     echo "Please select which user(s) to configure with localconfig:"
     echo "  1) Ansible user and root only (default)"
-    echo "  2) Specific user"
+    echo "  2) Specific user(s) - space-separated for multiple"
     echo "  3) All users on the system"
     echo ""
     read -p "Enter your choice [1-3] (default: 1): " choice
@@ -60,12 +60,19 @@ select_target_user() {
             ;;
         2)
             echo ""
-            read -p "Enter the username to configure: " TARGET_USER
+            echo -e "${YELLOW}Enter username(s) to configure (space-separated for multiple):${NC}"
+            read -p "Username(s): " TARGET_USER
             if [ -z "$TARGET_USER" ]; then
                 echo -e "${RED}Error: Username cannot be empty${NC}"
                 exit 1
             fi
-            echo -e "${GREEN}Selected: Configure user '$TARGET_USER'${NC}"
+            # Count number of users (split by space)
+            USER_COUNT=$(echo "$TARGET_USER" | wc -w | tr -d ' ')
+            if [ "$USER_COUNT" -eq 1 ]; then
+                echo -e "${GREEN}Selected: Configure user '$TARGET_USER'${NC}"
+            else
+                echo -e "${GREEN}Selected: Configure $USER_COUNT users: $TARGET_USER${NC}"
+            fi
             ;;
         3)
             TARGET_USER="all"
