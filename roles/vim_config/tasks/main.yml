@@ -15,7 +15,7 @@
 # Copy Configuration Files to User's Home Directory
 - name: Copy configuration files to user's home directory
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../files/{{ item }}"
+    src: "{{ files_dir }}/{{ item }}"
     dest: "~{{ ansible_user }}/{{ item }}"
   loop:
     - .vimrc
@@ -31,7 +31,7 @@
 # Copy Configuration Files to Root's Home Directory
 - name: Copy configuration files to root's home directory
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../files/{{ item }}"
+    src: "{{ files_dir }}/{{ item }}"
     dest: "/root/{{ item }}"
   loop:
     - .vimrc
@@ -55,7 +55,7 @@
 
 - name: Copy badwolf.vim color theme to Vim colors directory
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../files/colors/badwolf.vim"
+    src: "{{ files_dir }}/colors/badwolf.vim"
     dest: "/usr/share/vim/vim{{ vim_version }}/colors/badwolf.vim"
   become: yes
 
@@ -67,7 +67,7 @@
 
 - name: Copy Vim plugin files
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../files/plugin/{{ item }}"
+    src: "{{ files_dir }}/plugin/{{ item }}"
     dest: "/usr/share/vim/vim{{ vim_version }}/plugin/{{ item }}"
   loop:
     - airline.vim
@@ -80,9 +80,19 @@
     state: directory
   become: yes
 
-- name: Copy autoload files for Vim
+- name: Copy autoload files for Vim using find and copy
+  ansible.builtin.find:
+    paths: "{{ files_dir }}/autoload"
+    recurse: yes
+    file_type: file
+  register: autoload_files
+  delegate_to: localhost
+  run_once: true
+
+- name: Copy each autoload file to remote host
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../files/autoload/"
-    dest: "/usr/share/vim/vim{{ vim_version }}/autoload/"
-    remote_src: yes
+    src: "{{ item.path }}"
+    dest: "/usr/share/vim/vim{{ vim_version }}/autoload/{{ item.path | regex_replace('^' + files_dir + '/autoload/', '') }}"
+    mode: preserve
+  loop: "{{ autoload_files.files }}"
   become: yes

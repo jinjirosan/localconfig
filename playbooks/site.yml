@@ -21,6 +21,8 @@
 - name: Setup All Systems
   hosts: all
   gather_facts: yes
+  vars:
+    files_dir: "{{ playbook_dir }}/../files"
   roles:
     - ssh_setup
     - tools_setup
