@@ -152,7 +152,8 @@ echo -e "${GREEN}========================================${NC}"
 echo ""
 
 # Explicitly set the remote user to ensure it's used
-ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --ask-become-pass
+# Note: No --ask-become-pass needed since setup_client.sh configures NOPASSWD sudo for ansible user
+ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER"
 
 # Check result
 if [ $? -eq 0 ]; then
