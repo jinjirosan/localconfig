@@ -11,12 +11,13 @@
       register: sudoers_check
       failed_when: sudoers_check.rc not in [0, 1]
       become: true
+      when: target_user is defined and target_user != "all"
 
     - name: Add target_user to sudoers
       ansible.builtin.shell: |
         echo "{{ target_user }} ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers
       become: true
-      when: sudoers_check.rc == 1
+      when: target_user is defined and target_user != "all" and sudoers_check.rc == 1
 
 - name: Setup All Systems
   hosts: all

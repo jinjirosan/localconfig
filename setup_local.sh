@@ -1,47 +1,153 @@
-
 #!/bin/bash
+# setup_local.sh
+# This script deploys localconfig to the local machine using Ansible
+# Run this script on the LOCAL MACHINE (where localconfig repo is cloned)
+#
+# Usage: ./setup_local.sh
+
+set -e
+
 # Get the currently logged-in user
 CURRENT_USER=$(whoami)
+TARGET_USER=""
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to select target user configuration
+select_target_user() {
+    echo ""
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}Target User Selection${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    echo "Please select which user(s) to configure with localconfig:"
+    echo "  1) Current user ($CURRENT_USER) and root only (default)"
+    echo "  2) Specific user"
+    echo "  3) All users on the system"
+    echo ""
+    read -p "Enter your choice [1-3] (default: 1): " choice
+    choice=${choice:-1}
+    
+    case $choice in
+        1)
+            TARGET_USER="$CURRENT_USER"
+            echo -e "${GREEN}Selected: Configure current user ($CURRENT_USER) and root${NC}"
+            ;;
+        2)
+            echo ""
+            read -p "Enter the username to configure: " TARGET_USER
+            if [ -z "$TARGET_USER" ]; then
+                echo -e "${RED}Error: Username cannot be empty${NC}"
+                exit 1
+            fi
+            echo -e "${GREEN}Selected: Configure user '$TARGET_USER'${NC}"
+            ;;
+        3)
+            TARGET_USER="all"
+            echo -e "${GREEN}Selected: Configure all users on the system${NC}"
+            ;;
+        *)
+            echo -e "${RED}Invalid choice. Exiting.${NC}"
+            exit 1
+            ;;
+    esac
+}
+
+echo -e "${GREEN}Preparing to deploy localconfig to local machine...${NC}"
+
+# Navigate to script directory (localconfig repo root)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR" || exit
+
+# Check if we're in the localconfig repository
+if [ ! -f "playbooks/site.yml" ] || [ ! -d "roles" ]; then
+    echo -e "${RED}Error: This script must be run from the localconfig repository root${NC}"
+    exit 1
+fi
 
 # Ensure Ansible is installed
 if ! command -v ansible > /dev/null; then
-  echo "Ansible is not installed. Installing Ansible..."
-  if [ -f /etc/debian_version ]; then
-    sudo apt update && sudo apt install ansible -y
-  elif [ -f /etc/redhat-release ]; then
-    sudo yum install epel-release -y && sudo yum install ansible -y
-  else
-    echo "Unsupported OS. Please install Ansible manually."
-    exit 1
-  fi
+    echo -e "${YELLOW}Ansible is not installed. Installing Ansible...${NC}"
+    if [ -f /etc/debian_version ]; then
+        sudo apt update && sudo apt install ansible -y
+    elif [ -f /etc/redhat-release ]; then
+        sudo yum install epel-release -y && sudo yum install ansible -y
+    else
+        echo -e "${RED}Unsupported OS. Please install Ansible manually.${NC}"
+        exit 1
+    fi
 fi
 
-# Navigate to the ansible_localconfig directory
-cd "$(dirname "$0")" || exit
+# Select target user interactively
+select_target_user
 
 # Ensure hosts.ini exists and is correctly configured
 if [ ! -f hosts.ini ]; then
-  echo "[local]
-localhost ansible_connection=local ansible_python_interpreter=/usr/bin/python3" > hosts.ini
-  echo "Generated hosts.ini with a [local] section."
+    echo -e "${YELLOW}Creating hosts.ini file...${NC}"
+    cat > hosts.ini <<EOF
+[local]
+localhost ansible_connection=local ansible_user=$CURRENT_USER ansible_become=yes ansible_python_interpreter=/usr/bin/python3
+EOF
+    echo -e "${GREEN}Generated hosts.ini with a [local] section.${NC}"
+else
+    # Update hosts.ini to ensure it has correct ansible_user
+    if ! grep -q "^localhost.*ansible_user=" hosts.ini 2>/dev/null; then
+        echo -e "${YELLOW}Updating hosts.ini with current user...${NC}"
+        sed -i.bak "s|^localhost.*|localhost ansible_connection=local ansible_user=$CURRENT_USER ansible_become=yes ansible_python_interpreter=/usr/bin/python3|" hosts.ini
+        [ -f hosts.ini.bak ] && rm hosts.ini.bak
+    fi
 fi
 
-# Run the playbook targeting the [local] group
-# Check if the current user is already in sudoers
+# Check if the current user is already in sudoers with NOPASSWD
+NEED_BECOME_PASS=""
 if ! sudo -n true 2>/dev/null; then
-  echo "$CURRENT_USER is not in sudoers. Using root for initial setup."
-  ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "ansible_user=root target_user=$CURRENT_USER" --ask-become-pass
+    echo -e "${YELLOW}Current user ($CURRENT_USER) requires password for sudo.${NC}"
+    echo -e "${YELLOW}You will be prompted for your sudo password.${NC}"
+    NEED_BECOME_PASS="--ask-become-pass"
 else
-  echo "$CURRENT_USER is in sudoers. Proceeding with normal setup."
-  # Always pass ansible_user so files go to the current user's home, not root's
-  ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "ansible_user=$CURRENT_USER" --ask-become-pass
+    echo -e "${GREEN}Current user ($CURRENT_USER) has passwordless sudo access.${NC}"
 fi
 
-echo "Running the Ansible playbook for the local setup..."
+# Run the Ansible playbook
+echo ""
+echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}Deploying localconfig to local machine${NC}"
+echo -e "${GREEN}========================================${NC}"
+echo ""
 
-# Notify the user
-if [ $? -eq 0 ]; then
-  echo "Local setup completed successfully!"
+# Always pass target_user explicitly (ansible_user comes from hosts.ini)
+if [ "$TARGET_USER" = "all" ]; then
+    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=all" $NEED_BECOME_PASS
 else
-  echo "An error occurred during local setup. Please check the output above for details."
+    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=$TARGET_USER" $NEED_BECOME_PASS
+fi
+
+# Check result
+if [ $? -eq 0 ]; then
+    echo ""
+    echo -e "${GREEN}========================================${NC}"
+    echo -e "${GREEN}Local setup completed successfully!${NC}"
+    echo -e "${GREEN}========================================${NC}"
+    echo ""
+    echo "Localconfig has been deployed to: localhost"
+    echo "Ansible user: $CURRENT_USER"
+    if [ "$TARGET_USER" = "all" ]; then
+        echo "Target users configured: All users on the system"
+    else
+        echo "Target user configured: $TARGET_USER (and root)"
+    fi
+    echo ""
+else
+    echo ""
+    echo -e "${RED}========================================${NC}"
+    echo -e "${RED}Local setup failed!${NC}"
+    echo -e "${RED}========================================${NC}"
+    echo ""
+    echo "Please check the error messages above for details."
+    exit 1
 fi
