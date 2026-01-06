@@ -12,8 +12,8 @@
   ansible.builtin.set_fact:
     vim_version: "{{ vim_version_result.stdout | regex_replace('\\.', '') }}"
 
-# Copy Configuration Files to User's Home Directory
-- name: Copy configuration files to user's home directory
+# Copy Configuration Files to Ansible User's Home Directory
+- name: Copy configuration files to ansible user's home directory
   ansible.builtin.copy:
     src: "{{ files_dir }}/{{ item }}"
     dest: "~{{ ansible_user }}/{{ item }}"
@@ -23,10 +23,112 @@
     - .bashrc
     - .curlrc
 
-- name: Ensure .vim directory exists in user's home
+- name: Ensure .vim directory exists in ansible user's home
   ansible.builtin.file:
     path: "~{{ ansible_user }}/.vim"
     state: directory
+
+# Handle "all" users case
+- name: Get all users with home directories
+  ansible.builtin.shell: |
+    getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $6 ~ /^\/home\// {print $1":"$6}'
+  register: all_users_with_homes
+  changed_when: false
+  when: target_user is defined and target_user == "all"
+  become: yes
+
+- name: Set fact for all users list
+  ansible.builtin.set_fact:
+    users_to_configure: "{{ all_users_with_homes.stdout_lines | map('regex_replace', '(.*):(.*)', '\\1') | list }}"
+  when: target_user is defined and target_user == "all"
+
+- name: Get all user home directories
+  ansible.builtin.set_fact:
+    user_homes: "{{ user_homes | default({}) | combine({item.split(':')[0]: item.split(':')[1]}) }}"
+  loop: "{{ all_users_with_homes.stdout_lines }}"
+  when: target_user is defined and target_user == "all"
+
+# Copy Configuration Files to Target User's Home Directory (if different from ansible_user and not "all")
+- name: Get target user's home directory
+  ansible.builtin.shell: "getent passwd {{ target_user }} | cut -d: -f6"
+  register: target_user_home
+  changed_when: false
+  when: target_user is defined and target_user != ansible_user and target_user != "all"
+  become: yes
+
+- name: Copy configuration files to target user's home directory
+  ansible.builtin.copy:
+    src: "{{ files_dir }}/{{ item }}"
+    dest: "{{ target_user_home.stdout }}/{{ item }}"
+    owner: "{{ target_user }}"
+    mode: '0644'
+  loop:
+    - .vimrc
+    - .screenrc
+    - .bashrc
+    - .curlrc
+  when: target_user is defined and target_user != ansible_user and target_user != "all" and target_user_home.stdout is defined
+  become: yes
+
+- name: Ensure .vim directory exists in target user's home
+  ansible.builtin.file:
+    path: "{{ target_user_home.stdout }}/.vim"
+    state: directory
+    owner: "{{ target_user }}"
+    mode: '0755'
+  when: target_user is defined and target_user != ansible_user and target_user != "all" and target_user_home.stdout is defined
+  become: yes
+
+# Configure all users (when target_user is "all")
+- name: Copy .vimrc to all users
+  ansible.builtin.copy:
+    src: "{{ files_dir }}/.vimrc"
+    dest: "{{ user_homes[item] }}/.vimrc"
+    owner: "{{ item }}"
+    mode: '0644'
+  loop: "{{ users_to_configure }}"
+  when: target_user is defined and target_user == "all" and users_to_configure is defined
+  become: yes
+
+- name: Copy .screenrc to all users
+  ansible.builtin.copy:
+    src: "{{ files_dir }}/.screenrc"
+    dest: "{{ user_homes[item] }}/.screenrc"
+    owner: "{{ item }}"
+    mode: '0644'
+  loop: "{{ users_to_configure }}"
+  when: target_user is defined and target_user == "all" and users_to_configure is defined
+  become: yes
+
+- name: Copy .bashrc to all users
+  ansible.builtin.copy:
+    src: "{{ files_dir }}/.bashrc"
+    dest: "{{ user_homes[item] }}/.bashrc"
+    owner: "{{ item }}"
+    mode: '0644'
+  loop: "{{ users_to_configure }}"
+  when: target_user is defined and target_user == "all" and users_to_configure is defined
+  become: yes
+
+- name: Copy .curlrc to all users
+  ansible.builtin.copy:
+    src: "{{ files_dir }}/.curlrc"
+    dest: "{{ user_homes[item] }}/.curlrc"
+    owner: "{{ item }}"
+    mode: '0644'
+  loop: "{{ users_to_configure }}"
+  when: target_user is defined and target_user == "all" and users_to_configure is defined
+  become: yes
+
+- name: Ensure .vim directory exists in all users' homes
+  ansible.builtin.file:
+    path: "{{ user_homes[item] }}/.vim"
+    state: directory
+    owner: "{{ item }}"
+    mode: '0755'
+  loop: "{{ users_to_configure }}"
+  when: target_user is defined and target_user == "all" and users_to_configure is defined
+  become: yes
 
 # Copy Configuration Files to Root's Home Directory
 - name: Copy configuration files to root's home directory

@@ -3,9 +3,10 @@
 # This script deploys localconfig to a remote VM using Ansible
 # Run this script on the CONTROL HOST (where localconfig repo is cloned)
 #
-# Usage: ./setup_remote.sh <remote_host_ip_or_hostname> [ansible_user]
+# Usage: ./setup_remote.sh <remote_host_ip_or_hostname> [ansible_user] [target_user]
 # Example: ./setup_remote.sh 172.16.234.7
 # Example: ./setup_remote.sh 172.16.234.7 ansible
+# Example: ./setup_remote.sh 172.16.234.7 ansible rayf
 
 set -e
 
@@ -15,11 +16,13 @@ ANSIBLE_USER="${2:-ansible}"
 CONTROL_USER=$(whoami)
 SSH_KEY_PATH="$HOME/.ssh/id_rsa.pub"
 HOSTS_INI="hosts.ini"
+TARGET_USER=""
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Check if remote host is provided
@@ -28,8 +31,55 @@ if [ -z "$REMOTE_HOST" ]; then
     echo "Usage: $0 <remote_host_ip_or_hostname> [ansible_user]"
     echo "Example: $0 172.16.234.7"
     echo "Example: $0 172.16.234.7 ansible"
+    echo ""
+    echo "  ansible_user: User to connect as (default: ansible)"
+    echo ""
+    echo "Note: You will be prompted to select which user(s) to configure."
     exit 1
 fi
+
+# Function to select target user configuration
+select_target_user() {
+    echo ""
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}Target User Selection${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    echo "Please select which user(s) to configure with localconfig:"
+    echo "  1) Ansible user and root only (default)"
+    echo "  2) Specific user"
+    echo "  3) All users on the system"
+    echo ""
+    read -p "Enter your choice [1-3] (default: 1): " choice
+    choice=${choice:-1}
+    
+    case $choice in
+        1)
+            TARGET_USER="$ANSIBLE_USER"
+            echo -e "${GREEN}Selected: Configure ansible user ($ANSIBLE_USER) and root${NC}"
+            ;;
+        2)
+            echo ""
+            read -p "Enter the username to configure: " TARGET_USER
+            if [ -z "$TARGET_USER" ]; then
+                echo -e "${RED}Error: Username cannot be empty${NC}"
+                exit 1
+            fi
+            echo -e "${GREEN}Selected: Configure user '$TARGET_USER'${NC}"
+            ;;
+        3)
+            TARGET_USER="all"
+            echo -e "${GREEN}Selected: Configure all users on the system${NC}"
+            ;;
+        *)
+            echo -e "${RED}Invalid choice. Exiting.${NC}"
+            exit 1
+            ;;
+    esac
+}
+
+# Select target user interactively
+select_target_user
 
 echo -e "${GREEN}Preparing to deploy localconfig to remote host: $REMOTE_HOST${NC}"
 
@@ -153,7 +203,11 @@ echo ""
 
 # Explicitly set the remote user to ensure it's used
 # Note: No --ask-become-pass needed since setup_client.sh configures NOPASSWD sudo for ansible user
-ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER"
+if [ "$TARGET_USER" = "all" ]; then
+    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=all"
+else
+    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=$TARGET_USER"
+fi
 
 # Check result
 if [ $? -eq 0 ]; then
@@ -163,7 +217,12 @@ if [ $? -eq 0 ]; then
     echo -e "${GREEN}========================================${NC}"
     echo ""
     echo "Localconfig has been deployed to: $REMOTE_HOST"
-    echo "User: $ANSIBLE_USER"
+    echo "Ansible user: $ANSIBLE_USER"
+    if [ "$TARGET_USER" = "all" ]; then
+        echo "Target users configured: All users on the system"
+    else
+        echo "Target user configured: $TARGET_USER (and root)"
+    fi
     echo ""
 else
     echo ""

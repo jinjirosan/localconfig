@@ -23,6 +23,7 @@
   gather_facts: yes
   vars:
     files_dir: "{{ playbook_dir }}/../files"
+    target_user: "{{ target_user | default(ansible_user) }}"
   roles:
     - ssh_setup
     - tools_setup
