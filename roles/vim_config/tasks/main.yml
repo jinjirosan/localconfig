@@ -92,7 +92,7 @@
 - name: Copy each autoload file to remote host
   ansible.builtin.copy:
     src: "{{ item.path }}"
-    dest: "/usr/share/vim/vim{{ vim_version }}/autoload/{{ item.path | regex_replace('^' + files_dir + '/autoload/', '') }}"
+    dest: "/usr/share/vim/vim{{ vim_version }}/autoload/{{ item.path | regex_replace('^.*/autoload/', '') }}"
     mode: preserve
   loop: "{{ autoload_files.files }}"
   become: yes
