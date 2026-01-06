@@ -122,6 +122,15 @@ fi
 # Remove backup file if it exists
 [ -f "$HOSTS_INI.bak" ] && rm "$HOSTS_INI.bak"
 
+# Verify hosts.ini entry
+echo -e "${YELLOW}Verifying hosts.ini configuration...${NC}"
+if grep -q "^$REMOTE_HOST.*ansible_user=$ANSIBLE_USER" "$HOSTS_INI"; then
+    echo -e "${GREEN}Hosts.ini entry verified: $REMOTE_HOST with ansible_user=$ANSIBLE_USER${NC}"
+else
+    echo -e "${YELLOW}Warning: Could not verify hosts.ini entry. Current entry:${NC}"
+    grep "^$REMOTE_HOST" "$HOSTS_INI" || echo "  (not found)"
+fi
+
 # Test Ansible connectivity
 echo -e "${YELLOW}Testing Ansible connectivity...${NC}"
 if ansible "$REMOTE_HOST" -i "$HOSTS_INI" -m ping -u "$ANSIBLE_USER" > /dev/null 2>&1; then
@@ -142,7 +151,8 @@ echo -e "${GREEN}Deploying localconfig to $REMOTE_HOST${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
-ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" --ask-become-pass
+# Explicitly set the remote user to ensure it's used
+ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --ask-become-pass
 
 # Check result
 if [ $? -eq 0 ]; then

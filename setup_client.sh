@@ -3,19 +3,20 @@
 # This script prepares a fresh VM for remote Ansible management
 # Run this script on the NEW VM (as root or with sudo privileges)
 #
-# Usage: ./setup_client.sh <control_host_ssh_public_key>
-# Example: ./setup_client.sh "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ..."
+# Usage: ./setup_client.sh
+#       or ./setup_client.sh <control_host_ssh_public_key> (non-interactive mode)
 
 set -e
 
 # Configuration
 ANSIBLE_USER="ansible"
-CONTROL_HOST_SSH_KEY="${1}"
+DEFAULT_SSH_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4NVd3hCHLQZxBq9icE547vv1CCbACXQDyKZj09iAcobtAvT7U0jy4PcfmdKtWJA8u/2axYDSs9VbjdJi+crJn7oc0GC6/Jt9hF+u7Ok4jLfnMnNxB/3jzJJlnwLz8JHvZd7AGv4++yWHd+3mEIrYZAXNaszfhs4cgwmfWK1QTHGM566/SrV/GUqGxiaVjDNQ9MpyY6v0gpURAqhVAP7pyM3kKIDugMrPHHVk71WrHoqRmH8XJBlZfwykIxEQPYRmKuggxedIru80Fa4rZ4oV9UgauVouaQFJvpEca4n1+92J+JTbTJRoFrOaOERggtTbpXu4nYOIPFnX6Wn9a1nnZ"
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Check if running as root or with sudo
@@ -24,13 +25,67 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Check if SSH public key is provided
-if [ -z "$CONTROL_HOST_SSH_KEY" ]; then
-    echo -e "${RED}Error: SSH public key from control host is required${NC}"
-    echo "Usage: $0 <control_host_ssh_public_key>"
-    echo "Example: $0 \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ...\""
-    exit 1
-fi
+# Function to get SSH public key (interactive or from argument)
+get_ssh_key() {
+    # If SSH key provided as command-line argument, use it (non-interactive mode)
+    if [ -n "${1}" ]; then
+        CONTROL_HOST_SSH_KEY="${1}"
+        echo -e "${GREEN}Using SSH public key from command-line argument${NC}"
+        return
+    fi
+    
+    # Interactive mode: show menu
+    echo ""
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}SSH Public Key Selection${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    echo "Please select an option:"
+    echo "  1) Use default control machine SSH key (recommended)"
+    echo "  2) Enter/paste a custom SSH public key"
+    echo ""
+    read -p "Enter your choice [1-2] (default: 1): " choice
+    choice=${choice:-1}
+    
+    case $choice in
+        1)
+            CONTROL_HOST_SSH_KEY="$DEFAULT_SSH_KEY"
+            echo -e "${GREEN}Using default control machine SSH key${NC}"
+            ;;
+        2)
+            echo ""
+            echo -e "${YELLOW}Please paste or enter the SSH public key:${NC}"
+            echo -e "${YELLOW}(Press Enter on a new line when finished)${NC}"
+            echo ""
+            read -r CONTROL_HOST_SSH_KEY
+            
+            # Validate that a key was entered
+            if [ -z "$CONTROL_HOST_SSH_KEY" ]; then
+                echo -e "${RED}Error: No SSH public key provided${NC}"
+                exit 1
+            fi
+            
+            # Basic validation - check if it looks like an SSH key
+            if [[ ! "$CONTROL_HOST_SSH_KEY" =~ ^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521) ]]; then
+                echo -e "${YELLOW}Warning: The provided key doesn't appear to be a standard SSH public key format${NC}"
+                read -p "Continue anyway? [y/N]: " confirm
+                if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+                    echo "Aborted."
+                    exit 1
+                fi
+            fi
+            
+            echo -e "${GREEN}Using custom SSH public key${NC}"
+            ;;
+        *)
+            echo -e "${RED}Invalid choice. Exiting.${NC}"
+            exit 1
+            ;;
+    esac
+}
+
+# Get SSH key (interactive or from argument)
+get_ssh_key "${1}"
 
 echo -e "${GREEN}Starting VM preparation for Ansible management...${NC}"
 

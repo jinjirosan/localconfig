@@ -2,20 +2,19 @@
 ---
 - name: Initial Setup
   hosts: all
+  # Use ansible_user from inventory - don't override connection user
+  vars:
+    target_user: "{{ ansible_user | default(lookup('env', 'USER')) }}"
   tasks:
-    - name: Ensure ansible_user is defined
-      ansible.builtin.set_fact:
-        ansible_user: "{{ lookup('env', 'USER') }}"
-
-    - name: Check if ansible_user is in sudoers
-      ansible.builtin.shell: grep -q "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL" /etc/sudoers
+    - name: Check if target_user is in sudoers
+      ansible.builtin.shell: grep -q "{{ target_user }} ALL=(ALL:ALL) NOPASSWD:ALL" /etc/sudoers
       register: sudoers_check
       failed_when: sudoers_check.rc not in [0, 1]
       become: true
 
-    - name: Add ansible_user to sudoers
+    - name: Add target_user to sudoers
       ansible.builtin.shell: |
-        echo "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers
+        echo "{{ target_user }} ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers
       become: true
       when: sudoers_check.rc == 1
 

@@ -33,7 +33,8 @@ if ! sudo -n true 2>/dev/null; then
   ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "ansible_user=root target_user=$CURRENT_USER" --ask-become-pass
 else
   echo "$CURRENT_USER is in sudoers. Proceeding with normal setup."
-  ansible-playbook playbooks/site.yml -i hosts.ini -l local --ask-become-pass
+  # Always pass ansible_user so files go to the current user's home, not root's
+  ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "ansible_user=$CURRENT_USER" --ask-become-pass
 fi
 
 echo "Running the Ansible playbook for the local setup..."
