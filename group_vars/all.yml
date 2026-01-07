@@ -15,5 +15,6 @@ debian_ubuntu_packages:
   - mlocate
   - lsof
   - netcat-openbsd
+  - pv
 
 
