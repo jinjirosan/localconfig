@@ -331,7 +331,7 @@ select -
 # Window  {{{1
 #-------------------------------------------------------------------------------
 select Main
-  screen -t Main 1 bash -lc "LOG_FILE=''; \
+  screen -t Main 0 bash -lc "LOG_FILE=''; \
     if [ -f /var/log/syslog ]; then LOG_FILE=/var/log/syslog; \
     elif [ -f /var/log/messages ]; then LOG_FILE=/var/log/messages; fi; \
     if [ -n \"\$LOG_FILE\" ]; then sudo tail -F \"\$LOG_FILE\"; \
@@ -448,11 +448,12 @@ select 2
 layout select 3
 
 # expand window group at windowlist on window 99(Main)
-focus up
-focus right
-focus down
-select Main
-stuff 'g'
+# Disabled: stuff 'g' was causing windowlist to show automatically on startup
+#focus up
+#focus right
+#focus down
+#select Main
+#stuff 'g'
 
 # call echo-sd on window 88(echo-sd)
 focus up
@@ -466,7 +467,7 @@ focus right
 #focus down
 
 focus bottom
-select 1
+select 0
 
 layout show
 
