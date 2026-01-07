@@ -339,7 +339,7 @@ select Main
 
 select Monitor
   screen -t top 89 htop
-  screen -t network 88 sudo watch -c -d -n3 "echo '=== LISTENING PORTS ===' && ss -tlnp | awk 'NR>1 {print \$1, \$4, \$6}' | sed 's/users:((\"//g' | sed 's/\".*//g' | column -t && echo '' && echo '=== ACTIVE CONNECTIONS ===' && ss -tunp | awk 'NR>1 && \$1!=\"LISTEN\" {print \$1, \$5, \$7}' | sed 's/users:((\"//g' | sed 's/\".*//g' | head -15 | column -t"
+  screen -t network 88 sudo watch -t -c -d -n3 "ss -tlnp | awk 'NR>1 {print \$1, \$4, \$6}' | sed 's/users:((\"//g' | sed 's/\".*//g' | column -t > /tmp/listen.tmp && ss -tunp | awk 'NR>1 && \$1!=\"LISTEN\" {print \$1, \$5, \$7}' | sed 's/users:((\"//g' | sed 's/\".*//g' | head -15 | column -t > /tmp/active.tmp && pr -m -t /tmp/listen.tmp /tmp/active.tmp && rm -f /tmp/listen.tmp /tmp/active.tmp"
   # exit the window group
   select -
 
