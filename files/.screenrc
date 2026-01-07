@@ -331,7 +331,7 @@ select -
 # Window  {{{1
 #-------------------------------------------------------------------------------
 select Main
-  screen -t Main 0 bash -lc 'sudo tail -F /var/log/messages | pv -L 20 -q | while IFS= read -r line; do cols=$(tput cols); echo "${line:0:$cols}"; done'
+  screen -t Main 0 bash -lc 'LOG_FILE=/var/log/messages; [ -f /var/log/syslog ] && LOG_FILE=/var/log/syslog; sudo tail -F "$LOG_FILE" | pv -L 20 -q | while IFS= read -r line; do cols=$(tput cols); echo "${line:0:$cols}"; done'
   screen 1 
   screen 2
   screen 3
@@ -448,11 +448,11 @@ focus up
 focus right
 #stuff "which wget &>/dev/null && wget -q -O- 'http://www.osstech.co.jp/cgi-bin/echo-sd?scripts=&options=text'\012"
 
-# enter copy mode on window 1
-focus down
-copy
+# enter copy mode on window 1 (disabled by default)
+#focus down
+#copy
 
-focus down
+#focus down
 
 layout show
 
