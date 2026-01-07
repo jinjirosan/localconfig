@@ -14,6 +14,6 @@ debian_ubuntu_packages:
   - gcc
   - mlocate
   - lsof
-  - netcat
+  - netcat-openbsd
 
 
