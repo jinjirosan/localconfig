@@ -331,7 +331,7 @@ select -
 # Window  {{{1
 #-------------------------------------------------------------------------------
 select Main
-  screen -t Main 0 bash -lc "LOG_FILE=''; if [ -f /var/log/syslog ]; then LOG_FILE=/var/log/syslog; elif [ -f /var/log/messages ]; then LOG_FILE=/var/log/messages; fi; if [ -n \"\$LOG_FILE\" ]; then sudo tail -F \"\$LOG_FILE\"; else sudo journalctl -f -o short; fi | pv -L 20 -q | while IFS= read -r line; do cols=\$(tput cols); echo \"\${line:0:\$cols}\"; done"
+  screen -t Main 0 bash -lc "LOG_FILE=''; if [ -f /var/log/syslog ]; then LOG_FILE=/var/log/syslog; elif [ -f /var/log/messages ]; then LOG_FILE=/var/log/messages; fi; if [ -n \"\$LOG_FILE\" ]; then sudo tail -F \"\$LOG_FILE\"; else sudo journalctl -f -o short; fi | awk '{ t=\$3; \$1=\"\"; \$2=\"\"; \$3=\"\"; \$4=\"\"; sub(/^ +/,\"\"); print t, \$0 }' | pv -L 20 -q | while IFS= read -r line; do cols=\$(tput cols); echo \"\${line:0:\$cols}\"; done"
   screen 1 
   screen 2
   screen 3
@@ -457,6 +457,9 @@ focus right
 #copy
 
 #focus down
+
+focus bottom
+select 0
 
 layout show
 
