@@ -440,9 +440,9 @@ focus right
 select 88
 split
 focus down
-select 1
+select 0
 focus bottom
-select 2
+select 0
 
 #}}}
 layout select 3
