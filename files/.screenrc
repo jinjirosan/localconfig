@@ -331,14 +331,7 @@ select -
 # Window  {{{1
 #-------------------------------------------------------------------------------
 select Main
-  screen -t Main 0 bash -lc "LOG_FILE=''; \
-    if [ -f /var/log/syslog ]; then LOG_FILE=/var/log/syslog; \
-    elif [ -f /var/log/messages ]; then LOG_FILE=/var/log/messages; fi; \
-    if [ -n \"\$LOG_FILE\" ]; then sudo tail -F \"\$LOG_FILE\"; \
-    else sudo journalctl -f -o short; fi | \
-    perl -pe 's/^\\S+\\s+\\S+\\s+(\\S+)\\s+\\S+\\s+/$1 /' | \
-    pv -L 20 -q | \
-    while IFS= read -r line; do cols=\$(tput cols); echo \"\${line:0:\$cols}\"; done"
+  screen -t Main 0 
   screen 1 
   screen 2
   screen 3
@@ -388,32 +381,28 @@ focus up
 # layout {{{2
 #-------------------------------------------------------------------------------
 # horizonal layout {{{2
-# NOTE: MagicMirror / Raspberry Pi specific startup layout.
-# Kept here for reference, but disabled by default so it does not
-# inject commands into the Main window.
-#
-#layout new 1:horizontal
-## +----------------------------------------------------------------------------+
-## | 4                                                                          |
-## |                                                                            |
-## |                                                                            |
-## |                                                                            |
-## +-------------------------------------+--------------------------------------+
-## | 1                                   | 0                                    |
-## +-------------------------------------+--------------------------------------+
-#select 4
-#stuff "cd /home/pi/MagicMirror/config^M"
-#split
-#focus down
-##select 1 ### temporary replaced the three-window-layout for a two-window-layout to see if this is better
-##split -v
-##focus next
-#select 0
-#stuff "cd /home/pi/^M"
-#stuff "pm2 restart mm.sh --update-env"
-#focus right
-#resize -v -l 40%
-#focus top
+layout new 1:horizontal
+# +----------------------------------------------------------------------------+
+# | 4                                                                          |
+# |                                                                            |
+# |                                                                            |
+# |                                                                            |
+# +-------------------------------------+--------------------------------------+
+# | 1                                   | 0                                    |
+# +-------------------------------------+--------------------------------------+
+select 4
+stuff "cd /home/pi/MagicMirror/config^M"
+split
+focus down
+#select 1 ### temporary replaced the three-window-layout for a two-window-layout to see if this is better
+#split -v
+#focus next
+select 0
+stuff "cd /home/pi/^M"
+stuff "pm2 restart mm.sh --update-env"
+focus right
+resize -v -l 40%
+focus top
 
 # single layout {{{2
 layout new 2:single
@@ -429,7 +418,7 @@ layout new 3:default
 # |                                     +--------------------------------------+
 # |                                     | 99                                   |
 # +-------------------------------------+--------------------------------------+
-# | 0                                                                          |
+# | 2                                                                          |
 # |                                                                            |
 # |                                                                            |
 # +----------------------------------------------------------------------------+
@@ -440,34 +429,30 @@ focus right
 select 88
 split
 focus down
-select 0
+select 1
 focus bottom
-select 0
+select 2
 
 #}}}
 layout select 3
 
 # expand window group at windowlist on window 99(Main)
-# Disabled: stuff 'g' was causing windowlist to show automatically on startup
-#focus up
-#focus right
-#focus down
-#select Main
-#stuff 'g'
+focus up
+focus right
+focus down
+select Main
+stuff 'g'
 
 # call echo-sd on window 88(echo-sd)
 focus up
 focus right
 #stuff "which wget &>/dev/null && wget -q -O- 'http://www.osstech.co.jp/cgi-bin/echo-sd?scripts=&options=text'\012"
 
-# enter copy mode on window 1 (disabled by default)
-#focus down
-#copy
+# enter copy mode on window 1
+focus down
+copy
 
-#focus down
-
-focus bottom
-select 0
+focus down
 
 layout show
 
