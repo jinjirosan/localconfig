@@ -440,10 +440,8 @@ focus right
 select 88
 split
 focus down
-select Main
 select 0
 focus bottom
-select Main
 select 0
 
 #}}}
@@ -469,7 +467,6 @@ focus right
 #focus down
 
 focus bottom
-select Main
 select 0
 
 layout show
