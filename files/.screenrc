@@ -331,7 +331,7 @@ select -
 # Window  {{{1
 #-------------------------------------------------------------------------------
 select Main
-  screen -t Main 0 bash -lc 'LOG_FILE=/var/log/messages; [ -f /var/log/syslog ] && LOG_FILE=/var/log/syslog; sudo tail -F "$LOG_FILE" | pv -L 20 -q | while IFS= read -r line; do cols=$(tput cols); echo "${line:0:$cols}"; done'
+  screen -t Main 0 bash -lc "LOG_FILE=''; if [ -f /var/log/syslog ]; then LOG_FILE=/var/log/syslog; elif [ -f /var/log/messages ]; then LOG_FILE=/var/log/messages; fi; if [ -n \"\$LOG_FILE\" ]; then sudo tail -F \"\$LOG_FILE\"; else sudo journalctl -f -o short; fi | pv -L 20 -q | while IFS= read -r line; do cols=\$(tput cols); echo \"\${line:0:\$cols}\"; done"
   screen 1 
   screen 2
   screen 3
@@ -381,28 +381,32 @@ focus up
 # layout {{{2
 #-------------------------------------------------------------------------------
 # horizonal layout {{{2
-layout new 1:horizontal
-# +----------------------------------------------------------------------------+
-# | 4                                                                          |
-# |                                                                            |
-# |                                                                            |
-# |                                                                            |
-# +-------------------------------------+--------------------------------------+
-# | 1                                   | 0                                    |
-# +-------------------------------------+--------------------------------------+
-select 4
-stuff "cd /home/pi/MagicMirror/config^M"
-split
-focus down
-#select 1 ### temporary replaced the three-window-layout for a two-window-layout to see if this is better
-#split -v
-#focus next
-select 0
-stuff "cd /home/pi/^M"
-stuff "pm2 restart mm.sh --update-env"
-focus right
-resize -v -l 40%
-focus top
+# NOTE: MagicMirror / Raspberry Pi specific startup layout.
+# Kept here for reference, but disabled by default so it does not
+# inject commands into the Main window.
+#
+#layout new 1:horizontal
+## +----------------------------------------------------------------------------+
+## | 4                                                                          |
+## |                                                                            |
+## |                                                                            |
+## |                                                                            |
+## +-------------------------------------+--------------------------------------+
+## | 1                                   | 0                                    |
+## +-------------------------------------+--------------------------------------+
+#select 4
+#stuff "cd /home/pi/MagicMirror/config^M"
+#split
+#focus down
+##select 1 ### temporary replaced the three-window-layout for a two-window-layout to see if this is better
+##split -v
+##focus next
+#select 0
+#stuff "cd /home/pi/^M"
+#stuff "pm2 restart mm.sh --update-env"
+#focus right
+#resize -v -l 40%
+#focus top
 
 # single layout {{{2
 layout new 2:single
