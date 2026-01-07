@@ -467,6 +467,7 @@ focus right
 #focus down
 
 focus bottom
+select Main
 select 0
 
 layout show
