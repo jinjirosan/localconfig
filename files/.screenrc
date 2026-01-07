@@ -59,9 +59,9 @@ bind s colon 'screen -t '
 
 # list of all windows is displayed for visual window selection.
 # override default `w'(windows) mapping.
-# show the windows inside any groups in current level and downwards.
-bind w  windowlist -g
-bind ^W windowlist -g -m # sorting by most-recently-used list.
+# show all windows regardless of group.
+bind w  windowlist -b
+bind ^W windowlist -b -m # sorting by most-recently-used list.
 
 # continuous switch to other window
 bind ^N           eval 'next' 'command -c select'
