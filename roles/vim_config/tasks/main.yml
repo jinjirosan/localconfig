@@ -181,20 +181,15 @@
 
 - name: Ensure screen directories exist in all users' homes
   ansible.builtin.file:
-    path: "{{ user_homes[item] }}/screen/{{ screen_subdir }}"
+    path: "{{ user_homes[item.0] }}/screen/{{ item.1 }}"
     state: directory
-    owner: "{{ item }}"
+    owner: "{{ item.0 }}"
     mode: '0755'
-  loop: "{{ users_to_configure }}"
-  loop_control:
-    loop_var: item
-  vars:
-    screen_subdirs:
-      - hardcopy
-      - log
-  with_items: "{{ screen_subdirs }}"
+  loop: "{{ users_to_configure | product(['hardcopy', 'log']) | list }}"
   when: target_user is defined and target_user == "all" and users_to_configure is defined
   become: yes
+  loop_control:
+    label: "{{ item.0 }}: screen/{{ item.1 }}"
 
 # Copy Configuration Files to Root's Home Directory
 - name: Copy configuration files to root's home directory
