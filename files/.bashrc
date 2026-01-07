@@ -56,6 +56,25 @@ export LS_COLORS='no=00:fi=00:di=04;36:ln=01;36:pi=40;33:so=01;35:do=01;35:bd=40
 alias grep="/bin/grep $GREP_OPTIONS"
 unset GREP_OPTIONS
 
+# Defaults for GNU screen clipboard integration (can be overridden by user)
+if [ -z "$SCREEN_EXCHANGE_FILE" ]; then
+        export SCREEN_EXCHANGE_FILE="$HOME/.screen-exchange"
+fi
+
+if [ -z "$SCREEN_COPY_COMMAND" ]; then
+        # Safe no-op default to avoid errors if clipboard tooling is not installed.
+        # Override this in a local config (e.g. ~/.bashrc.local) with:
+        #   export SCREEN_COPY_COMMAND=\"xclip -selection clipboard\"   # Linux/X11
+        #   export SCREEN_COPY_COMMAND=\"pbcopy\"                        # macOS
+        export SCREEN_COPY_COMMAND="cat >/dev/null"
+fi
+
+if [ -z "$SCREEN_EXCHANGE_KEY" ]; then
+        # Used when sending the screen buffer to a remote clipboard helper.
+        # Default to /dev/null so the command remains valid even if unused.
+        export SCREEN_EXCHANGE_KEY="/dev/null"
+fi
+
 # Color for manpages in less makes manpages a little easier to read
 export LESS_TERMCAP_mb=$'\E[01;31m'
 export LESS_TERMCAP_md=$'\E[01;31m'

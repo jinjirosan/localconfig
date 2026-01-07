@@ -13,4 +13,7 @@ debian_ubuntu_packages:
   - curl
   - gcc
   - mlocate
+  - lsof
+  - netcat
+
 

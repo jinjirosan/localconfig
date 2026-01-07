@@ -28,6 +28,16 @@
     path: "~{{ ansible_user }}/.vim"
     state: directory
 
+- name: Ensure screen directories exist in ansible user's home
+  ansible.builtin.file:
+    path: "~{{ ansible_user }}/screen/{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: '0755'
+  loop:
+    - hardcopy
+    - log
+
 # Handle "all" users case
 - name: Get all users with home directories
   ansible.builtin.shell: |
@@ -64,6 +74,24 @@
   become: yes
   loop_control:
     label: "{{ item }}"
+
+# Ensure screen directories exist in target users' homes
+- name: Ensure screen directories exist in target users' homes
+  ansible.builtin.file:
+    path: "{{ item.1.stdout }}/screen/{{ item.0 }}"
+    state: directory
+    owner: "{{ item.1.item }}"
+    mode: '0755'
+  loop: "{{ ['hardcopy', 'log'] | product(target_user_homes.results) | list }}"
+  when:
+    - target_user is defined
+    - target_user != ansible_user
+    - target_user != "all"
+    - target_users_list | length > 0
+    - item.1.stdout is defined
+  become: yes
+  loop_control:
+    label: "{{ item.1.item }}: screen/{{ item.0 }}"
 
 # Copy Configuration Files to Target Users' Home Directories
 - name: Copy configuration files to target users' home directories
@@ -151,6 +179,23 @@
   when: target_user is defined and target_user == "all" and users_to_configure is defined
   become: yes
 
+- name: Ensure screen directories exist in all users' homes
+  ansible.builtin.file:
+    path: "{{ user_homes[item] }}/screen/{{ screen_subdir }}"
+    state: directory
+    owner: "{{ item }}"
+    mode: '0755'
+  loop: "{{ users_to_configure }}"
+  loop_control:
+    loop_var: item
+  vars:
+    screen_subdirs:
+      - hardcopy
+      - log
+  with_items: "{{ screen_subdirs }}"
+  when: target_user is defined and target_user == "all" and users_to_configure is defined
+  become: yes
+
 # Copy Configuration Files to Root's Home Directory
 - name: Copy configuration files to root's home directory
   ansible.builtin.copy:
@@ -167,6 +212,16 @@
   ansible.builtin.file:
     path: "/root/.vim"
     state: directory
+  become: yes
+
+- name: Ensure screen directories exist in root's home
+  ansible.builtin.file:
+    path: "/root/screen/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - hardcopy
+    - log
   become: yes
 
 # Configure Vim Colors, Plugins, and Autoload
