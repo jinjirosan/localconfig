@@ -331,7 +331,7 @@ select -
 # Window  {{{1
 #-------------------------------------------------------------------------------
 select Main
-  screen -t Main 0 
+  screen -t log 0 bash -lc 'export LC_ALL=C; exec sudo journalctl -f -o short 2>/dev/null | sed -E "s/^[A-Za-z]{3} +[0-9]{1,2} +([0-9]{2}:[0-9]{2}:[0-9]{2}) +[^ ]+ +/\1 /" 2>/dev/null' 
   screen 1 
   screen 2
   screen 3
@@ -429,7 +429,7 @@ focus right
 select 88
 split
 focus down
-select 1
+select 0
 focus bottom
 select 2
 
@@ -440,16 +440,16 @@ layout select 3
 focus up
 focus right
 focus down
-select Main
-stuff 'g'
+select 0
+#stuff 'g'
 
 # call echo-sd on window 88(echo-sd)
-focus up
-focus right
+#focus up
+#focus right
 #stuff "which wget &>/dev/null && wget -q -O- 'http://www.osstech.co.jp/cgi-bin/echo-sd?scripts=&options=text'\012"
 
 # enter copy mode on window 1
-focus down
+#focus down
 copy
 
 focus down
