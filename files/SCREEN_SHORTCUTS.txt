@@ -1,0 +1,155 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    GNU Screen Keyboard Shortcuts                          ║
+║                         Quick Reference Card                             ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+ESCAPE KEY: C-t (Ctrl+t)  |  Literal 'a': C-t a
+
+═══════════════════════════════════════════════════════════════════════════
+WINDOWS
+═══════════════════════════════════════════════════════════════════════════
+C-t w      Window list (all windows)
+C-t C-w    Window list (most-recently-used)
+C-t s      New window with title prompt
+C-t N      Next window
+C-t P      Previous window
+C-t ^N     Next window (continuous)
+C-t ^P     Previous window (continuous)
+C-t N      Renumber window
+
+═══════════════════════════════════════════════════════════════════════════
+REGION / FOCUS (Vim-like)
+═══════════════════════════════════════════════════════════════════════════
+C-t k      Focus up
+C-t h      Focus left
+C-t l      Focus right
+C-t t      Focus top
+C-t b      Focus bottom
+
+C-t r      Enter region mode
+C-t ^R     Enter region mode
+
+In Region Mode:
+  ^N       Focus next
+  ^P       Focus prev
+  ^J       Focus down
+  ^K       Focus up
+  ^T       Focus top
+  ^B       Focus bottom
+  ^H       Focus left
+  ^L       Focus right
+  
+  j        Resize vertical +1 (local)
+  k        Resize vertical -1 (local)
+  J        Resize vertical +10 (local)
+  K        Resize vertical -10 (local)
+  h        Resize horizontal -1 (local)
+  l        Resize horizontal +1 (local)
+  H        Resize horizontal -10 (local)
+  L        Resize horizontal +10 (local)
+  <        Resize horizontal -1
+  >        Resize horizontal +1
+  (        Resize horizontal -10
+  )        Resize horizontal +10
+  +        Resize +1
+  -        Resize -1
+  =        Resize equal (local)
+  .        Resize min
+  _        Resize max
+  
+  n        Split horizontal
+  s        Split horizontal + focus down
+  v        Split vertical
+  |        Split vertical
+  ^V       Split vertical
+  c        Remove region
+  o        Only (remove others)
+  1        Only
+  2        Split horizontal
+  3        Split vertical
+
+═══════════════════════════════════════════════════════════════════════════
+COPY / PASTE
+═══════════════════════════════════════════════════════════════════════════
+C-t [      Enter copy mode
+  Space    Copy + write to clipboard (in copy mode)
+  Y        Copy + write to clipboard (in copy mode)
+  W        Copy + write to clipboard (in copy mode)
+C-t Y      Yank to register
+C-t P      Paste from register
+C-t ^]     Paste to remote clipboard
+
+═══════════════════════════════════════════════════════════════════════════
+LAYOUTS
+═══════════════════════════════════════════════════════════════════════════
+C-t y      Show layouts
+C-t ^Y     Show layouts
+
+In Layout Mode:
+  c        Create new layout
+  X        Remove layout
+  A        Set layout title
+  N        Set layout number
+  '        Select layout
+  n        Next layout
+  p        Previous layout
+  ^N       Next layout (continuous)
+  ^P       Previous layout (continuous)
+  0-9      Select layout by number
+
+═══════════════════════════════════════════════════════════════════════════
+ENCODING
+═══════════════════════════════════════════════════════════════════════════
+C-t e      Switch encoding
+
+In Encoding Mode:
+  u        UTF-8
+  e        EUC-JP
+  s        Shift-JIS
+  j        JIS
+  U        UTF-8 + set LANG
+  E        EUC-JP + set LANG
+  S        Shift-JIS + set LANG
+
+═══════════════════════════════════════════════════════════════════════════
+TOGGLE OPTIONS
+═══════════════════════════════════════════════════════════════════════════
+C-t o      Toggle options menu
+
+In Toggle Option Mode:
+  a        Altscreen
+  b        BCE (background-color-erase)
+  h        Hardcopy append (submenu)
+  m        Mousetrack (submenu)
+  v        Visual bell
+  w        Wrap
+
+═══════════════════════════════════════════════════════════════════════════
+MESSAGE LINE / STATUS
+═══════════════════════════════════════════════════════════════════════════
+C-t j      Message line control
+
+In Message Line Mode:
+  a        Hardstatus alwayslastline
+  i        Hardstatus ignore
+  l        Hardstatus lastline
+  m        Hardstatus message
+  w        Caption always
+  s        Caption splitonly
+  _        Ignore all
+  .        Restore all
+
+═══════════════════════════════════════════════════════════════════════════
+OTHER
+═══════════════════════════════════════════════════════════════════════════
+C-t .      Reload .screenrc
+C-t ^G     Cancel (disabled vbell toggle)
+
+═══════════════════════════════════════════════════════════════════════════
+NOTES
+═══════════════════════════════════════════════════════════════════════════
+• Default layout: 3 (default)
+• Scrollback: 10000 lines
+• Logs: screen/log/screenlog.*
+• Hardcopy: screen/hardcopy/
+

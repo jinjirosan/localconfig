@@ -1,0 +1,17 @@
+Quick Reference Card    
+
+ESCAPE KEY: C-t (Ctrl+t) 
+
+C-t w      Window list (all windows)
+C-t TAB    Cycle through windows
+
+C-t ^E     Switch encoding
+C-t o      Toggle options menu
+C-t J      Message line control
+C-t .      Reload .screenrc
+C-t ^G     Cancel (disabled vbell toggle)
+
+C-t [      Enter copy/scrollback mode
+In Copy/SCrollback Mode:
+  C-u      Scroll up
+  C-d      Scroll down

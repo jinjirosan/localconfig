@@ -22,6 +22,7 @@
     - .screenrc
     - .bashrc
     - .curlrc
+    - quick_ref_keybindings.txt
 
 - name: Ensure .vim directory exists in ansible user's home
   ansible.builtin.file:
@@ -100,7 +101,7 @@
     dest: "{{ item.1.stdout }}/{{ item.0 }}"
     owner: "{{ item.1.item }}"
     mode: '0644'
-  loop: "{{ ['.vimrc', '.screenrc', '.bashrc', '.curlrc'] | product(target_user_homes.results) | list }}"
+  loop: "{{ ['.vimrc', '.screenrc', '.bashrc', '.curlrc', 'quick_ref_keybindings.txt'] | product(target_user_homes.results) | list }}"
   when: 
     - target_user is defined 
     - target_user != ansible_user 
@@ -169,6 +170,16 @@
   when: target_user is defined and target_user == "all" and users_to_configure is defined
   become: yes
 
+- name: Copy quick_ref_keybindings.txt to all users
+  ansible.builtin.copy:
+    src: "{{ files_dir }}/quick_ref_keybindings.txt"
+    dest: "{{ user_homes[item] }}/quick_ref_keybindings.txt"
+    owner: "{{ item }}"
+    mode: '0644'
+  loop: "{{ users_to_configure }}"
+  when: target_user is defined and target_user == "all" and users_to_configure is defined
+  become: yes
+
 - name: Ensure .vim directory exists in all users' homes
   ansible.builtin.file:
     path: "{{ user_homes[item] }}/.vim"
@@ -201,6 +212,7 @@
     - .screenrc
     - .bashrc
     - .curlrc
+    - quick_ref_keybindings.txt
   become: yes
 
 - name: Ensure .vim directory exists in root's home

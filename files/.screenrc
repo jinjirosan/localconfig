@@ -1,6 +1,6 @@
-# Jin's screenrc 2018-2021
-# usage   : Debian
-# version : 0.4
+# Jin's screenrc 2018-2026
+# usage   : Debian/RHEL
+# version : 4.1
 # window  : 128x50 minimum size
 
 # Escape key is C-t, literal is a.
@@ -74,7 +74,7 @@ bind -c select ^P eval 'prev' 'command -c select'
 bind N colon 'number '
 
 # control message line
-bind J eval 'command -c messageline' 'echo "[Message Line] hardstatus: [a]lwayslastline [i]gnore [l]astline [m]essage / caption: al[w]ays [s]plitonly / [.] restore all [_] ignore all"'
+bind j eval 'command -c messageline' 'echo "[Message Line] hardstatus: [a]lwayslastline [i]gnore [l]astline [m]essage / caption: al[w]ays [s]plitonly / [.] restore all [_] ignore all"'
 bind -c messageline a eval 'hardstatus alwayslastline'
 bind -c messageline i eval 'hardstatus ignore'
 bind -c messageline l eval 'hardstatus lastline'
@@ -89,13 +89,14 @@ bind -c messageline . eval 'hardstatus alwayslastline' 'caption always'
 #-------------------------------------------------------------------------------
 # switch focus to other region(like vim)
 # orverride default `k'(kill), `t'(time), `b'(break) mappings.
-bind j focus down
+# bind j focus down  # Removed - now used for message line control
 bind k focus up
 bind t focus top
 bind b focus bottom
 
 # override default `h'(hardcopy), `l'(redisplay) mapping
-bind h focus left
+# bind h focus left  # Removed - now used for help/quick reference
+bind h eval 'stuff "cat ~/quick_ref_keybindings.txt\012"' 'echo "Displaying quick reference..."'
 bind l focus right
 
 # continuous region operations(like vim)
@@ -211,7 +212,7 @@ defbce on
 cjkwidth on
 
 # to switch window encoding, and set the relevant environment variables.(for b-shell)
-bind ^E             eval 'command -c encoding' 'echo "switch window encoding to: [u]tf8 [e]ucjp [s]jis [j]is / with env [U]tf8 [E]ucjp [S]jis"'
+bind e              eval 'command -c encoding' 'echo "switch window encoding to: [u]tf8 [e]ucjp [s]jis [j]is / with env [U]tf8 [E]ucjp [S]jis"'
 bind -c encoding ^U eval 'encoding utf8'  'info'
 bind -c encoding u  eval 'encoding utf8'  'info'
 bind -c encoding ^E eval 'encoding eucjp' 'info'
@@ -441,17 +442,6 @@ focus up
 focus right
 focus down
 select 0
-#stuff 'g'
-
-# call echo-sd on window 88(echo-sd)
-#focus up
-#focus right
-#stuff "which wget &>/dev/null && wget -q -O- 'http://www.osstech.co.jp/cgi-bin/echo-sd?scripts=&options=text'\012"
-
-# enter copy mode on window 1
-#focus down
-#copy
-
 focus down
 
 layout show
