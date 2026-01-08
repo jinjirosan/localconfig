@@ -17,4 +17,4 @@ In Copy/Scrollback Mode:
   C-d      Scroll down
 
 C-t d      Screen detach (re-attach screen -d -r)
-C-t \      Screen clean exit
+C-t \      Screen clean exita
