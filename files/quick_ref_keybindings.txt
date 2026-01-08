@@ -1,10 +1,9 @@
 Quick Reference Card    
-
 ESCAPE KEY: C-t (Ctrl+t) 
 
 C-t w      Window list (all windows)
-C-t TAB    Cycle through windows
-
+C-t y      Change window layout
+C-t TAB    Cycle through sections
 C-t e      Switch encoding
 C-t o      Toggle options menu
 C-t j      Message line control
@@ -17,3 +16,5 @@ In Copy/Scrollback Mode:
   C-u      Scroll up
   C-d      Scroll down
 
+C-t d      Screen detach (re-attach screen -d -r)
+C-t \      Screen clean exit

@@ -1,6 +1,6 @@
 "==============================================
-" Jin's .vimrc 2018-2021
-" version                   : 0.7
+" Jin's .vimrc 2018-2026
+" version                   : 0.7.1
 "
 " plugin path (*NIX)        : /usr/share/vim/vim80/plugin           # airline
 " plugin path (FBSD)        : /usr/local/share/vim/vim74/plugin     # airline
