@@ -450,7 +450,7 @@ select 0
 
 # enter copy mode on window 1
 #focus down
-copy
+#copy
 
 focus down
 
