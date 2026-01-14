@@ -150,12 +150,36 @@ elif [ "$PKG_MANAGER" = "yum" ]; then
     fi
     $INSTALL_CMD git sudo sshpass python3 python3-pip
 elif [ "$PKG_MANAGER" = "pkg" ]; then
-    # FreeBSD: sshpass is not available, use py39-pip or py310-pip based on Python version
-    PYTHON_VERSION=$(python3 --version 2>/dev/null | awk '{print $2}' | cut -d. -f1,2 | tr -d '.')
-    if [ -z "$PYTHON_VERSION" ]; then
-        PYTHON_VERSION="39"  # Default to Python 3.9
+    # FreeBSD: sshpass is not available, detect Python version dynamically
+    # First, check if python3 is already installed
+    if command -v python3 > /dev/null 2>&1; then
+        # Python3 is installed, detect version
+        PYTHON_VERSION=$(python3 --version 2>/dev/null | awk '{print $2}' | cut -d. -f1,2 | tr -d '.')
+        printf "%b\n" "${YELLOW}Detected installed Python version: 3.${PYTHON_VERSION#3}${NC}"
+    else
+        # Python3 not installed, install it first (default version)
+        printf "%b\n" "${YELLOW}Installing Python3 (default version)...${NC}"
+        $INSTALL_CMD python3
+        
+        # Now detect the version that was installed
+        if command -v python3 > /dev/null 2>&1; then
+            PYTHON_VERSION=$(python3 --version 2>/dev/null | awk '{print $2}' | cut -d. -f1,2 | tr -d '.')
+            printf "%b\n" "${YELLOW}Detected Python version: 3.${PYTHON_VERSION#3}${NC}"
+        else
+            printf "%b\n" "${RED}Error: Python3 installation failed${NC}"
+            exit 1
+        fi
     fi
-    $INSTALL_CMD git sudo python${PYTHON_VERSION} py${PYTHON_VERSION}-pip
+    
+    # Validate we have a Python version
+    if [ -z "$PYTHON_VERSION" ]; then
+        printf "%b\n" "${RED}Error: Could not determine Python version${NC}"
+        exit 1
+    fi
+    
+    # Install git, sudo, and pip for the detected Python version
+    printf "%b\n" "${YELLOW}Installing git, sudo, and pip for Python ${PYTHON_VERSION}...${NC}"
+    $INSTALL_CMD git sudo py${PYTHON_VERSION}-pip
     printf "%b\n" "${YELLOW}Note: sshpass is not available on FreeBSD. SSH key setup will work without it.${NC}"
 fi
 
@@ -170,8 +194,28 @@ if id "$ANSIBLE_USER" >/dev/null 2>&1; then
     printf "%b\n" "${YELLOW}User '$ANSIBLE_USER' already exists${NC}"
 else
     printf "%b\n" "${YELLOW}Creating user '$ANSIBLE_USER'...${NC}"
-    useradd -m -s /bin/bash "$ANSIBLE_USER"
-    printf "%b\n" "${GREEN}User '$ANSIBLE_USER' created successfully${NC}"
+    # Determine shell - prefer bash if available, otherwise use sh
+    USER_SHELL="/bin/sh"
+    if command -v bash >/dev/null 2>&1; then
+        # Use the actual path where bash is located
+        USER_SHELL=$(command -v bash)
+    fi
+    
+    # Use OS-specific user creation command
+    if [ "$PKG_MANAGER" = "pkg" ]; then
+        # FreeBSD uses pw useradd
+        pw useradd -n "$ANSIBLE_USER" -m -s "$USER_SHELL" -c "Ansible user"
+    else
+        # Linux (Debian/Ubuntu/RHEL) uses useradd
+        useradd -m -s "$USER_SHELL" "$ANSIBLE_USER"
+    fi
+    
+    if [ $? -eq 0 ]; then
+        printf "%b\n" "${GREEN}User '$ANSIBLE_USER' created successfully${NC}"
+    else
+        printf "%b\n" "${RED}Error: Failed to create user '$ANSIBLE_USER'${NC}"
+        exit 1
+    fi
 fi
 
 # Create .ssh directory for ansible user
