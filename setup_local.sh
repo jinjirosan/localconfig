@@ -10,6 +10,7 @@ set -e
 # Get the currently logged-in user
 CURRENT_USER=$(whoami)
 TARGET_USER=""
+REPLACE_MOTD="no"  # Default to no, will be set by preview_motd function
 
 # Colors for output
 RED='\033[0;31m'
@@ -151,9 +152,9 @@ echo ""
 
 # Always pass target_user explicitly (ansible_user comes from hosts.ini)
 if [ "$TARGET_USER" = "all" ]; then
-    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=all" $NEED_BECOME_PASS
+    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=all replace_motd=$REPLACE_MOTD" $NEED_BECOME_PASS
 else
-    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=$TARGET_USER" $NEED_BECOME_PASS
+    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD" $NEED_BECOME_PASS
 fi
 
 # Check result

@@ -34,50 +34,15 @@
   when: ansible_facts['os_family'] == 'RedHat'
   ignore_errors: yes
 
-# MOTD handling (Debian/Ubuntu/FreeBSD): include safety net and ASCII art generation
-# FreeBSD: /etc/motd is often a symlink to /var/run/motd (tmpfs, cleared on reboot)
-# We need to replace the symlink with a regular file so the MOTD persists
-- name: Check if /etc/motd is a symlink on FreeBSD
-  ansible.builtin.stat:
-    path: /etc/motd
-  register: motd_stat_freebsd
-  become: yes
-  when: ansible_facts['os_family'] == 'FreeBSD'
-  changed_when: false
+# MOTD handling for all OSes
+# FreeBSD: Uses /etc/motd.template which is processed by the motd service
+# Debian/Ubuntu: Uses /etc/motd
+# RHEL: Uses /etc/issue and /etc/issue.net
+# replace_motd variable controls whether to replace existing MOTD (default: yes)
 
-- name: Backup and remove /etc/motd symlink on FreeBSD, create regular file
-  ansible.builtin.shell: |
-    if [ -L /etc/motd ]; then
-      # Backup the symlink target content if it exists
-      if [ -f /var/run/motd ]; then
-        cp /var/run/motd /etc/motd.backup.symlink
-      fi
-      # Remove the symlink
-      rm -f /etc/motd
-      # Create a regular file
-      touch /etc/motd
-      chmod 644 /etc/motd
-    fi
-  become: yes
-  when: 
-    - ansible_facts['os_family'] == 'FreeBSD'
-    - motd_stat_freebsd.stat.islnk is defined
-    - motd_stat_freebsd.stat.islnk
-  ignore_errors: yes
-
-- name: Check if MOTD exists and get size
-  ansible.builtin.stat:
-    path: /etc/motd
-  register: motd_stat
-  become: yes
-  when: ansible_facts['os_family'] != 'RedHat'
-  changed_when: false
-
-- name: Set facts for MOTD existence and size
+- name: Set default replace_motd if not specified
   ansible.builtin.set_fact:
-    motd_exists: "{{ motd_stat.stat.exists | default(false) }}"
-    motd_size: "{{ motd_stat.stat.size | default(0) | int }}"
-  when: ansible_facts['os_family'] != 'RedHat'
+    replace_motd: "{{ replace_motd | default('yes') }}"
 
 - name: Install figlet for ASCII art MOTD
   ansible.builtin.package:
@@ -87,7 +52,7 @@
   when:
     - ansible_facts['os_family'] != 'RedHat'
     - ascii_art_enabled | default(true)
-    - not (motd_exists | default(false) and (motd_size | default(0) | int) > (motd_size_threshold | default(300) | int))
+    - replace_motd | default('yes') | lower == 'yes'
 
 - name: Generate ASCII art for hostname
   ansible.builtin.shell: |
@@ -98,7 +63,7 @@
   when:
     - ansible_facts['os_family'] != 'RedHat'
     - ascii_art_enabled | default(true)
-    - not (motd_exists | default(false) and (motd_size | default(0) | int) > (motd_size_threshold | default(300) | int))
+    - replace_motd | default('yes') | lower == 'yes'
 
 - name: Set ASCII art fact for hostname
   ansible.builtin.set_fact:
@@ -106,9 +71,35 @@
   when:
     - ansible_facts['os_family'] != 'RedHat'
     - ascii_art_enabled | default(true)
-    - not (motd_exists | default(false) and (motd_size | default(0) | int) > (motd_size_threshold | default(300) | int))
+    - replace_motd | default('yes') | lower == 'yes'
 
-- name: Deploy MOTD template
+# FreeBSD: Deploy to /etc/motd.template
+- name: Deploy MOTD template (FreeBSD - use motd.template)
+  ansible.builtin.template:
+    src: motd.j2
+    dest: /etc/motd.template
+    owner: root
+    group: "{{ root_group }}"
+    mode: '0644'
+  become: yes
+  when:
+    - ansible_facts['os_family'] == 'FreeBSD'
+    - replace_motd | default('yes') | lower == 'yes'
+  register: motd_template_deployed
+
+- name: Restart motd service on FreeBSD to apply template
+  ansible.builtin.service:
+    name: motd
+    state: restarted
+  become: yes
+  when:
+    - ansible_facts['os_family'] == 'FreeBSD'
+    - replace_motd | default('yes') | lower == 'yes'
+    - motd_template_deployed.changed is defined
+    - motd_template_deployed.changed
+
+# Debian/Ubuntu: Deploy to /etc/motd
+- name: Deploy MOTD template (Debian/Ubuntu)
   ansible.builtin.template:
     src: motd.j2
     dest: /etc/motd
@@ -117,8 +108,33 @@
     mode: '0644'
   become: yes
   when:
-    - ansible_facts['os_family'] != 'RedHat'
-    - not (motd_exists | default(false) and (motd_size | default(0) | int) > (motd_size_threshold | default(300) | int))
+    - ansible_facts['os_family'] == 'Debian'
+    - replace_motd | default('yes') | lower == 'yes'
+
+# RHEL: Deploy to /etc/issue and /etc/issue.net
+- name: Deploy issue template (RHEL)
+  ansible.builtin.template:
+    src: motd.j2
+    dest: /etc/issue
+    owner: root
+    group: "{{ root_group }}"
+    mode: '0644'
+  become: yes
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - replace_motd | default('yes') | lower == 'yes'
+
+- name: Deploy issue.net template (RHEL)
+  ansible.builtin.template:
+    src: motd.j2
+    dest: /etc/issue.net
+    owner: root
+    group: "{{ root_group }}"
+    mode: '0644'
+  become: yes
+  when:
+    - ansible_facts['os_family'] == 'RedHat'
+    - replace_motd | default('yes') | lower == 'yes'
 
 # FreeBSD: Ensure MOTD is displayed correctly
 # Check for .hushlogin files that might prevent MOTD display
@@ -171,35 +187,10 @@
   loop: "{{ fortune_profiles.stdout_lines | default([]) }}"
   ignore_errors: yes
 
-- name: Skip MOTD deployment - existing MOTD is larger than threshold, assuming custom ASCII art
+- name: Skip MOTD deployment message
   ansible.builtin.debug:
-    msg: "Skipping MOTD deployment: existing /etc/motd is {{ motd_size }} bytes (threshold: {{ motd_size_threshold | default(300) }})."
-  when:
-    - ansible_facts['os_family'] != 'RedHat'
-    - motd_exists | default(false)
-    - (motd_size | default(0) | int) > (motd_size_threshold | default(300) | int)
-
-# Configure issue file for RHEL (pre-login banner)
-- name: Deploy issue template (RHEL)
-  ansible.builtin.template:
-    src: issue.j2
-    dest: /etc/issue
-    owner: root
-    group: "{{ root_group }}"
-    mode: '0644'
-  become: yes
-  when: ansible_facts['os_family'] == 'RedHat'
-
-# Configure issue.net file for RHEL (SSH pre-login banner)
-- name: Deploy issue.net template (RHEL)
-  ansible.builtin.template:
-    src: issue.net.j2
-    dest: /etc/issue.net
-    owner: root
-    group: "{{ root_group }}"
-    mode: '0644'
-  become: yes
-  when: ansible_facts['os_family'] == 'RedHat'
+    msg: "Skipping MOTD deployment: user chose to keep existing MOTD."
+  when: replace_motd | default('yes') | lower == 'no'
 
 # Configure SSH Banner
 - name: Check if SSH banner is already configured

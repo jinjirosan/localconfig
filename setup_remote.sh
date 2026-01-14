@@ -17,6 +17,7 @@ CONTROL_USER=$(whoami)
 SSH_KEY_PATH="$HOME/.ssh/id_rsa.pub"
 HOSTS_INI="hosts.ini"
 TARGET_USER=""
+REPLACE_MOTD="no"  # Default to no, will be set by preview_motd function
 PYTHON_INTERPRETER="/usr/bin/python3"  # Default, will be detected if SSH works
 
 # Colors for output
@@ -86,6 +87,47 @@ select_target_user() {
     esac
 }
 
+# Function to preview MOTD and ask for replacement confirmation
+preview_motd() {
+    echo ""
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}MOTD Preview and Replacement${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    
+    # Use the already detected REMOTE_OS variable
+    # Set MOTD file path based on OS
+    if [ "$REMOTE_OS" = "freebsd" ]; then
+        MOTD_FILE="/etc/motd.template"
+    elif [ "$REMOTE_OS" = "rhel" ]; then
+        MOTD_FILE="/etc/issue"
+    else
+        MOTD_FILE="/etc/motd"
+    fi
+    
+    # Get current MOTD content
+    echo -e "${YELLOW}Current MOTD content from $MOTD_FILE:${NC}"
+    echo ""
+    CURRENT_MOTD=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$ANSIBLE_USER@$REMOTE_HOST" "cat $MOTD_FILE 2>/dev/null || echo '(File does not exist or is empty)'")
+    echo -e "${YELLOW}$CURRENT_MOTD${NC}"
+    echo ""
+    echo -e "${YELLOW}The new MOTD will contain ASCII art of the hostname and system information.${NC}"
+    echo ""
+    read -p "Do you want to replace the current MOTD with the new one? [y/N]: " replace_motd
+    replace_motd=${replace_motd:-N}
+    
+    case $replace_motd in
+        [Yy]*)
+            REPLACE_MOTD="yes"
+            echo -e "${GREEN}MOTD will be replaced with the new generated one${NC}"
+            ;;
+        *)
+            REPLACE_MOTD="no"
+            echo -e "${YELLOW}MOTD will be skipped (keeping current content)${NC}"
+            ;;
+    esac
+}
+
 # Select target user interactively
 select_target_user
 
@@ -151,6 +193,9 @@ if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$ANSIBLE_USER@$REMOTE_HO
             fi
             ;;
     esac
+    
+    # Preview MOTD and ask for replacement (after SSH connectivity is confirmed)
+    preview_motd
 else
     echo -e "${RED}Error: Cannot connect to $REMOTE_HOST as $ANSIBLE_USER${NC}"
     echo ""
@@ -237,9 +282,9 @@ echo ""
 # Explicitly set the remote user to ensure it's used
 # Note: No --ask-become-pass needed since setup_client.sh configures NOPASSWD sudo for ansible user
 if [ "$TARGET_USER" = "all" ]; then
-    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=all"
+    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=all replace_motd=$REPLACE_MOTD"
 else
-    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=$TARGET_USER"
+    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD"
 fi
 
 # Check result
