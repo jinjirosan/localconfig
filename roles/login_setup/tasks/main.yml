@@ -2,6 +2,11 @@
 # Login Setup Role
 # Configures login banners, MOTD, and SSH login messages
 
+# Set root group based on OS (FreeBSD uses 'wheel', others use 'root')
+- name: Set root group name based on OS
+  ansible.builtin.set_fact:
+    root_group: "{{ 'wheel' if ansible_facts['os_family'] == 'FreeBSD' else 'root' }}"
+
 - name: Backup existing MOTD
   ansible.builtin.copy:
     src: /etc/motd
@@ -78,7 +83,7 @@
     src: motd.j2
     dest: /etc/motd
     owner: root
-    group: root
+    group: "{{ root_group }}"
     mode: '0644'
   become: yes
   when:
@@ -99,7 +104,7 @@
     src: issue.j2
     dest: /etc/issue
     owner: root
-    group: root
+    group: "{{ root_group }}"
     mode: '0644'
   become: yes
   when: ansible_facts['os_family'] == 'RedHat'
@@ -110,7 +115,7 @@
     src: issue.net.j2
     dest: /etc/issue.net
     owner: root
-    group: root
+    group: "{{ root_group }}"
     mode: '0644'
   become: yes
   when: ansible_facts['os_family'] == 'RedHat'
@@ -128,7 +133,7 @@
     src: ssh_banner.j2
     dest: /etc/ssh/banner
     owner: root
-    group: root
+    group: "{{ root_group }}"
     mode: '0644'
   become: yes
   notify: restart sshd
