@@ -6,7 +6,7 @@
 # Usage: ./setup_client.sh
 #       or ./setup_client.sh <control_host_ssh_public_key> (non-interactive mode)
 #
-# Note: This script is POSIX-compliant and works with /bin/sh on FreeBSD and Raspberry Pi
+# Note: This script is POSIX-compliant and works with /bin/sh on FreeBSD
 
 set -e
 
@@ -37,15 +37,15 @@ get_ssh_key() {
     fi
     
     # Interactive mode: show menu
-    printf "\n"
+    echo ""
     printf "%s\n" "${BLUE}========================================${NC}"
     printf "%s\n" "${BLUE}SSH Public Key Selection${NC}"
     printf "%s\n" "${BLUE}========================================${NC}"
-    printf "\n"
-    printf "Please select an option:\n"
-    printf "  1) Use default control machine SSH key (recommended)\n"
-    printf "  2) Enter/paste a custom SSH public key\n"
-    printf "\n"
+    echo ""
+    echo "Please select an option:"
+    echo "  1) Use default control machine SSH key (recommended)"
+    echo "  2) Enter/paste a custom SSH public key"
+    echo ""
     printf "Enter your choice [1-2] (default: 1): "
     read choice
     if [ -z "$choice" ]; then
@@ -58,10 +58,10 @@ get_ssh_key() {
             printf "%s\n" "${GREEN}Using default control machine SSH key${NC}"
             ;;
         2)
-            printf "\n"
+            echo ""
             printf "%s\n" "${YELLOW}Please paste or enter the SSH public key:${NC}"
             printf "%s\n" "${YELLOW}(Press Enter on a new line when finished)${NC}"
-            printf "\n"
+            echo ""
             read CONTROL_HOST_SSH_KEY
             
             # Validate that a key was entered
@@ -84,7 +84,7 @@ get_ssh_key() {
                             # User confirmed, continue
                             ;;
                         *)
-                            printf "Aborted.\n"
+                            echo "Aborted."
                             exit 1
                             ;;
                     esac
@@ -166,20 +166,24 @@ if ! command -v python3 > /dev/null; then
 fi
 
 # Create ansible user if it doesn't exist
-if id "$ANSIBLE_USER" >/dev/null 2>&1; then
+if id "$ANSIBLE_USER" &>/dev/null; then
     printf "%s\n" "${YELLOW}User '$ANSIBLE_USER' already exists${NC}"
 else
     printf "%s\n" "${YELLOW}Creating user '$ANSIBLE_USER'...${NC}"
-    useradd -m -s /bin/bash "$ANSIBLE_USER"
+    if [ "$PKG_MANAGER" = "apt" ]; then
+        useradd -m -s /bin/bash "$ANSIBLE_USER"
+    else
+        useradd -m -s /bin/bash "$ANSIBLE_USER"
+    fi
     printf "%s\n" "${GREEN}User '$ANSIBLE_USER' created successfully${NC}"
 fi
 
 # Create .ssh directory for ansible user
 # Get home directory using getent (POSIX-compliant, works on all systems)
-ANSIBLE_HOME=$(getent passwd "$ANSIBLE_USER" 2>/dev/null | cut -d: -f6)
+ANSIBLE_HOME=$(getent passwd "$ANSIBLE_USER" | cut -d: -f6)
 if [ -z "$ANSIBLE_HOME" ]; then
-    # Fallback: try eval if getent fails (shouldn't happen if user was just created)
-    ANSIBLE_HOME=$(eval echo ~$ANSIBLE_USER 2>/dev/null || echo "/home/$ANSIBLE_USER")
+    # Fallback: try eval if getent fails
+    ANSIBLE_HOME=$(eval echo ~$ANSIBLE_USER)
 fi
 SSH_DIR="$ANSIBLE_HOME/.ssh"
 AUTHORIZED_KEYS="$SSH_DIR/authorized_keys"
@@ -196,11 +200,11 @@ if [ -f "$AUTHORIZED_KEYS" ]; then
     if grep -Fxq "$CONTROL_HOST_SSH_KEY" "$AUTHORIZED_KEYS" 2>/dev/null; then
         printf "%s\n" "${YELLOW}SSH key already exists in authorized_keys${NC}"
     else
-        printf "%s\n" "$CONTROL_HOST_SSH_KEY" >> "$AUTHORIZED_KEYS"
+        echo "$CONTROL_HOST_SSH_KEY" >> "$AUTHORIZED_KEYS"
         printf "%s\n" "${GREEN}SSH key added to authorized_keys${NC}"
     fi
 else
-    printf "%s\n" "$CONTROL_HOST_SSH_KEY" > "$AUTHORIZED_KEYS"
+    echo "$CONTROL_HOST_SSH_KEY" > "$AUTHORIZED_KEYS"
     printf "%s\n" "${GREEN}SSH key added to authorized_keys${NC}"
 fi
 
@@ -214,23 +218,24 @@ if grep -Fxq "$SUDOERS_ENTRY" /etc/sudoers 2>/dev/null; then
     printf "%s\n" "${YELLOW}'$ANSIBLE_USER' is already in sudoers${NC}"
 else
     # Add to sudoers using visudo for safety
-    printf "%s\n" "$SUDOERS_ENTRY" | EDITOR='tee -a' visudo > /dev/null
+    echo "$SUDOERS_ENTRY" | EDITOR='tee -a' visudo > /dev/null
     printf "%s\n" "${GREEN}'$ANSIBLE_USER' added to sudoers with NOPASSWD${NC}"
 fi
 
 # Display summary
-printf "\n"
+echo ""
 printf "%s\n" "${GREEN}========================================${NC}"
 printf "%s\n" "${GREEN}VM Preparation Complete!${NC}"
 printf "%s\n" "${GREEN}========================================${NC}"
-printf "\n"
-printf "Summary:\n"
-printf "  - User created: %s\n" "$ANSIBLE_USER"
-printf "  - SSH key added: Yes\n"
-printf "  - Sudo access: NOPASSWD configured\n"
-printf "  - Required packages: Installed\n"
-printf "\n"
+echo ""
+echo "Summary:"
+echo "  - User created: $ANSIBLE_USER"
+echo "  - SSH key added: Yes"
+echo "  - Sudo access: NOPASSWD configured"
+echo "  - Required packages: Installed"
+echo ""
 printf "%s\n" "${YELLOW}Next steps:${NC}"
-printf "  1. On your control host, run: ./setup_remote.sh <this_vm_ip_or_hostname>\n"
-printf "  2. The control host will deploy localconfig to this VM\n"
-printf "\n"
+echo "  1. On your control host, run: ./setup_remote.sh <this_vm_ip_or_hostname>"
+echo "  2. The control host will deploy localconfig to this VM"
+echo ""
+
