@@ -17,11 +17,14 @@
   ansible.builtin.stat:
     path: /etc/redhat-release
   register: rhel_release_check
+  when: ansible_facts['os_family'] != "Debian" and ansible_facts['os_family'] != "FreeBSD"
 
 - name: Set pkg_manager to yum/dnf for RHEL
   ansible.builtin.set_fact:
     pkg_manager: "yum"
-  when: rhel_release_check.stat.exists
+  when: 
+    - rhel_release_check.stat.exists is defined
+    - rhel_release_check.stat.exists
 
 # Install Sudo if Missing (Debian/Ubuntu)
 - name: Ensure sudo is installed on Debian/Ubuntu
@@ -121,6 +124,7 @@
   ansible.builtin.command: dpkg -l {{ item }}
   register: package_check
   changed_when: false
+  failed_when: false
   loop: "{{ debian_ubuntu_packages }}"
   when: pkg_manager == "apt"
 
@@ -129,7 +133,7 @@
   ansible.builtin.command: pkg info {{ item }}
   register: package_check_freebsd
   changed_when: false
-  failed_when: package_check_freebsd.rc != 0
+  failed_when: false
   loop: "{{ freebsd_packages }}"
   when: pkg_manager == "pkg"
 
@@ -138,7 +142,7 @@
   ansible.builtin.command: dnf list installed {{ item }}
   register: package_check_rhel
   changed_when: false
-  failed_when: "item not in package_check_rhel.stdout"
+  failed_when: false
   loop: "{{ rhel_packages }}"
   when: pkg_manager == "yum"
 
