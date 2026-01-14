@@ -153,29 +153,131 @@
     state: present
   when: pkg_manager == "apt"
   become: yes
-  ignore_errors: yes
 
-- name: Check if UTF-8 locale is already generated (Debian/Ubuntu)
-  ansible.builtin.command: locale -a | grep -q "en_US.utf8\|en_US.UTF-8"
-  register: locale_check
+- name: Check if locale.gen exists (Debian/Ubuntu)
+  ansible.builtin.stat:
+    path: /etc/locale.gen
+  register: locale_gen_file
   when: pkg_manager == "apt"
   become: yes
-  failed_when: false
-  changed_when: false
 
-- name: Generate UTF-8 locales (Debian/Ubuntu)
-  ansible.builtin.command: locale-gen en_US.UTF-8
+- name: Uncomment en_US.UTF-8 in locale.gen (Debian/Ubuntu)
+  ansible.builtin.replace:
+    path: /etc/locale.gen
+    regexp: '^#\s*(en_US\.UTF-8\s+UTF-8)'
+    replace: '\1'
   when: 
     - pkg_manager == "apt"
-    - locale_check.rc != 0
+    - locale_gen_file.stat.exists
   become: yes
-  ignore_errors: yes
+  register: locale_gen_modified
+
+- name: Verify locale.gen was modified (Debian/Ubuntu)
+  ansible.builtin.debug:
+    msg: "Locale.gen modification status: {{ locale_gen_modified.changed }}"
+  when: 
+    - pkg_manager == "apt"
+    - locale_gen_file.stat.exists
+
+- name: Check if UTF-8 locale is already generated (Debian/Ubuntu)
+  ansible.builtin.command: locale -a
+  register: available_locales
+  when: pkg_manager == "apt"
+  become: yes
+  changed_when: false
+  failed_when: false
+
+- name: Generate UTF-8 locales (Debian/Ubuntu)
+  ansible.builtin.command: locale-gen
+  when: 
+    - pkg_manager == "apt"
+    - locale_gen_file.stat.exists
+    - "'en_US.UTF-8' not in available_locales.stdout and 'en_US.utf8' not in available_locales.stdout"
+  become: yes
+  register: locale_gen_result
+
+- name: Verify locale was generated (Debian/Ubuntu)
+  ansible.builtin.command: locale -a | grep -E "(en_US\.UTF-8|en_US\.utf8)"
+  register: locale_verify
+  when: 
+    - pkg_manager == "apt"
+    - locale_gen_result is defined
+  become: yes
+  changed_when: false
+  failed_when: false
+
+- name: Warn if locale generation failed (Debian/Ubuntu)
+  ansible.builtin.debug:
+    msg: "Warning: en_US.UTF-8 locale may not be available. Locale generation may have failed."
+  when: 
+    - pkg_manager == "apt"
+    - locale_verify.rc != 0
+    - locale_gen_result is defined
 
 - name: Update default locale (Debian/Ubuntu)
   ansible.builtin.lineinfile:
     path: /etc/default/locale
     regexp: '^LANG='
     line: 'LANG=en_US.UTF-8'
+    state: present
+    create: yes
+  when: pkg_manager == "apt"
+  become: yes
+
+- name: Remove invalid locale settings from /etc/default/locale (Debian/Ubuntu)
+  ansible.builtin.lineinfile:
+    path: /etc/default/locale
+    regexp: '^LC_(CTYPE|COLLATE|MESSAGES|MONETARY|NUMERIC|TIME)=(UTF-8|utf-8)$'
+    state: absent
+  when: pkg_manager == "apt"
+  become: yes
+
+- name: Remove any other invalid locale patterns from /etc/default/locale (Debian/Ubuntu)
+  ansible.builtin.lineinfile:
+    path: /etc/default/locale
+    regexp: '^LC_CTYPE=.*[^A-Za-z0-9_.-]UTF-8$'
+    state: absent
+  when: pkg_manager == "apt"
+  become: yes
+
+- name: Set proper LC_* variables in /etc/default/locale (Debian/Ubuntu)
+  ansible.builtin.lineinfile:
+    path: /etc/default/locale
+    line: "{{ item }}"
+    state: present
+    create: yes
+  when: pkg_manager == "apt"
+  become: yes
+  loop:
+    - "LC_ALL=en_US.UTF-8"
+    - "LC_CTYPE=en_US.UTF-8"
+    - "LC_COLLATE=en_US.UTF-8"
+
+- name: Set locale in /etc/environment as safety net (Debian/Ubuntu)
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    regexp: '^LC_CTYPE='
+    line: 'LC_CTYPE=en_US.UTF-8'
+    state: present
+    create: yes
+  when: pkg_manager == "apt"
+  become: yes
+
+- name: Set LANG in /etc/environment as safety net (Debian/Ubuntu)
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    regexp: '^LANG='
+    line: 'LANG=en_US.UTF-8'
+    state: present
+    create: yes
+  when: pkg_manager == "apt"
+  become: yes
+
+- name: Set LC_ALL in /etc/environment as safety net (Debian/Ubuntu)
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    regexp: '^LC_ALL='
+    line: 'LC_ALL=en_US.UTF-8'
     state: present
     create: yes
   when: pkg_manager == "apt"
