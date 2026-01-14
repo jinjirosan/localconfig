@@ -414,32 +414,66 @@ install_bashrc_support ()
         fi
 }
 
-# Show current network information
+# Show current network information (OS-aware)
 netinfo ()
 {
         echo "--------------- Network Information ---------------"
-        /sbin/ifconfig | awk /'inet addr/ {print $2}'
-        echo ""
-        /sbin/ifconfig | awk /'Bcast/ {print $3}'
-        echo ""
-        /sbin/ifconfig | awk /'inet addr/ {print $4}'
-
-        /sbin/ifconfig | awk /'HWaddr/ {print $4,$5}'
+        if command -v ifconfig >/dev/null 2>&1; then
+            if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
+                # Linux: use 'inet addr' format
+                ifconfig | awk /'inet addr/ {print $2}' 2>/dev/null || ifconfig | grep 'inet ' | awk '{print $2}' 2>/dev/null
+                echo ""
+                ifconfig | awk /'Bcast/ {print $3}' 2>/dev/null || echo ""
+                echo ""
+                ifconfig | awk /'inet addr/ {print $4}' 2>/dev/null || echo ""
+                ifconfig | awk /'HWaddr/ {print $4,$5}' 2>/dev/null || ifconfig | grep 'ether' | awk '{print $2}' 2>/dev/null
+            elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
+                # FreeBSD: use 'inet' format (no 'addr')
+                ifconfig | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' 2>/dev/null
+                echo ""
+                ifconfig | grep 'netmask' | awk '{print $4}' 2>/dev/null || echo ""
+                echo ""
+                ifconfig | grep 'ether' | awk '{print $2}' 2>/dev/null
+            else
+                # Fallback: try generic ifconfig
+                ifconfig | grep 'inet ' | awk '{print $2}' 2>/dev/null
+            fi
+        elif command -v ip >/dev/null 2>&1; then
+            # Modern Linux: use ip command
+            ip addr show | grep 'inet ' | awk '{print $2}' 2>/dev/null
+        fi
         echo "---------------------------------------------------"
 }
 
-# IP address lookup
+# IP address lookup (OS-aware)
 alias whatismyip="whatsmyip"
 function whatsmyip ()
 {
-        # Dumps a list of all IP addresses for every device
-        # /sbin/ifconfig |grep -B1 "inet addr" |awk '{ if ( $1 == "inet" ) { print $2 } else if ( $2 == "Link" ) { printf "%s:" ,$1 } }' |awk -F: '{ print $1 ": " $3 }';
-
-        # Internal IP Lookup
-        echo -n "Internal IP: " ; /sbin/ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'
+        # Internal IP Lookup (OS-aware)
+        echo -n "Internal IP: "
+        if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
+            # Linux: try eth0, then any interface
+            ifconfig eth0 2>/dev/null | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' || \
+            ifconfig 2>/dev/null | grep "inet " | grep -v "127.0.0.1" | head -1 | awk '{print $2}' || \
+            (command -v ip >/dev/null 2>&1 && ip addr show 2>/dev/null | grep "inet " | grep -v "127.0.0.1" | head -1 | awk '{print $2}' | cut -d'/' -f1) || \
+            echo "Not found"
+        elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
+            # FreeBSD: get first non-loopback interface IP
+            ifconfig | grep "inet " | grep -v "127.0.0.1" | head -1 | awk '{print $2}' || echo "Not found"
+        else
+            # Fallback
+            ifconfig 2>/dev/null | grep "inet " | grep -v "127.0.0.1" | head -1 | awk '{print $2}' || echo "Not found"
+        fi
 
         # External IP Lookup
-        echo -n "External IP: " ; wget https://whatsmyip.org -O - -q
+        echo -n "External IP: "
+        if command -v wget >/dev/null 2>&1; then
+            wget https://whatsmyip.org -O - -q 2>/dev/null || echo "Unable to determine"
+        elif command -v curl >/dev/null 2>&1; then
+            curl -s https://whatsmyip.org 2>/dev/null || echo "Unable to determine"
+        else
+            echo "wget/curl not available"
+        fi
 }
 
 
@@ -463,7 +497,17 @@ trim()
 
 #================== Prompt (full width line + info) =============== {{{1
 
-alias cpu="grep 'cpu ' /proc/stat | awk '{usage=(\$2+\$4)*100/(\$2+\$4+\$5)} END {print usage}' | awk '{printf(\"%.1f\n\", \$1)}'"
+# OS-aware CPU usage alias
+if [ -f /proc/stat ]; then
+    # Linux: use /proc/stat
+    alias cpu="grep 'cpu ' /proc/stat | awk '{usage=(\$2+\$4)*100/(\$2+\$4+\$5)} END {print usage}' | awk '{printf(\"%.1f\n\", \$1)}'"
+elif command -v sysctl >/dev/null 2>&1 && [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
+    # FreeBSD: use sysctl for load average (simplified)
+    alias cpu="sysctl -n vm.loadavg | awk '{printf(\"%.1f\n\", \$2*100)}'"
+else
+    # Fallback: no-op
+    alias cpu="echo '0.0'"
+fi
 function __setprompt
 {
         # Must come first!
@@ -580,11 +624,19 @@ function __setprompt
         # Current directory
         PS1+="\[${DARKGRAY}\]\[${fill}\]\[${DARKGRAY}\](\[${BROWN}\]\w\[${DARKGRAY}\])-"
 
-        # Total size of files in current directory
-        PS1+="(\[${GREEN}\]$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')\[${DARKGRAY}\]:"
+        # Total size of files in current directory (OS-aware)
+        if command -v ls >/dev/null 2>&1 && command -v grep >/dev/null 2>&1 && command -v sed >/dev/null 2>&1; then
+            PS1+="(\[${GREEN}\]$(ls -lah 2>/dev/null | grep -m 1 total 2>/dev/null | sed 's/total //' 2>/dev/null || echo '0')\[${DARKGRAY}\]:"
+        else
+            PS1+="(\[${GREEN}\]0\[${DARKGRAY}\]:"
+        fi
 
-        # Number of files
-        PS1+="\[${GREEN}\]\$(/bin/ls -A -1 | /usr/bin/wc -l)\[${DARKGRAY}\])"
+        # Number of files (OS-aware)
+        if command -v ls >/dev/null 2>&1 && command -v wc >/dev/null 2>&1; then
+            PS1+="\[${GREEN}\]\$(ls -A -1 2>/dev/null | wc -l 2>/dev/null || echo '0')\[${DARKGRAY}\])"
+        else
+            PS1+="\[${GREEN}\]0\[${DARKGRAY}\])"
+        fi
 
         # Continue on a new line
         PS1+="\n"
@@ -613,7 +665,40 @@ w                               # uptime information and who is logged in
 echo ""                         # for spacing
 screen -list                    # list detached screen sessions
 echo ""                         # for spacing
-df -h -x tmpfs -x udev          # disk usage, minus def and swap
+
+# OS-aware disk usage display
+if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
+    # Linux: exclude tmpfs and udev
+    df -h -x tmpfs -x udev 2>/dev/null || df -h
+elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
+    # FreeBSD: show all filesystems (no tmpfs/udev to exclude)
+    df -h
+else
+    # Fallback: show all
+    df -h
+fi
+
 echo ""                         # for spacing
-sudo netstat -tulpn | grep LISTEN
+
+# OS-aware listening ports display
+if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
+    # Linux: use netstat with -tulpn flags
+    if command -v netstat >/dev/null 2>&1; then
+        sudo netstat -tulpn 2>/dev/null | grep LISTEN || netstat -tulpn 2>/dev/null | grep LISTEN || true
+    elif command -v ss >/dev/null 2>&1; then
+        # Fallback to ss if netstat not available
+        sudo ss -tulpn 2>/dev/null | grep LISTEN || ss -tulpn 2>/dev/null | grep LISTEN || true
+    fi
+elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
+    # FreeBSD: use netstat with -an flags and filter for LISTEN
+    if command -v netstat >/dev/null 2>&1; then
+        sudo netstat -an 2>/dev/null | grep LISTEN || netstat -an 2>/dev/null | grep LISTEN || true
+    fi
+else
+    # Fallback: try generic netstat
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -an 2>/dev/null | grep LISTEN || true
+    fi
+fi
+
 echo ""                         # for spacing

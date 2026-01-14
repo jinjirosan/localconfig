@@ -87,16 +87,38 @@
     - replace_motd | default('yes') | lower == 'yes'
   register: motd_template_deployed
 
-- name: Restart motd service on FreeBSD to apply template
-  ansible.builtin.service:
-    name: motd
-    state: restarted
+# FreeBSD: The login process displays "FreeBSD X.X-RELEASE..." before MOTD
+# This comes from the login process itself, not from MOTD
+# We can suppress it by modifying /etc/gettytab or by using login.conf
+# However, the cleanest approach is to write directly to /var/run/motd
+# and ensure the motd service doesn't overwrite it with kernel version prepended
+- name: Deploy MOTD directly to /var/run/motd (FreeBSD) to bypass service
+  ansible.builtin.template:
+    src: motd.j2
+    dest: /var/run/motd
+    owner: root
+    group: "{{ root_group }}"
+    mode: '0644'
   become: yes
   when:
     - ansible_facts['os_family'] == 'FreeBSD'
     - replace_motd | default('yes') | lower == 'yes'
     - motd_template_deployed.changed is defined
     - motd_template_deployed.changed
+
+# FreeBSD: Disable motd service to prevent it from overwriting our custom MOTD
+# The service would prepend kernel version on reboot, so we disable it
+- name: Disable motd service on FreeBSD to prevent kernel version prepending
+  ansible.builtin.lineinfile:
+    path: /etc/rc.conf
+    regexp: '^motd_enable='
+    line: 'motd_enable="NO"'
+    state: present
+  become: yes
+  when:
+    - ansible_facts['os_family'] == 'FreeBSD'
+    - replace_motd | default('yes') | lower == 'yes'
+  ignore_errors: yes
 
 # Debian/Ubuntu: Deploy to /etc/motd
 - name: Deploy MOTD template (Debian/Ubuntu)
