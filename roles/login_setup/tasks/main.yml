@@ -1,0 +1,150 @@
+---
+# Login Setup Role
+# Configures login banners, MOTD, and SSH login messages
+
+- name: Backup existing MOTD
+  ansible.builtin.copy:
+    src: /etc/motd
+    dest: /etc/motd.backup
+    remote_src: yes
+  become: yes
+  when: ansible_facts['os_family'] != 'RedHat'
+  ignore_errors: yes
+
+- name: Backup existing issue file (RHEL)
+  ansible.builtin.copy:
+    src: /etc/issue
+    dest: /etc/issue.backup
+    remote_src: yes
+  become: yes
+  when: ansible_facts['os_family'] == 'RedHat'
+  ignore_errors: yes
+
+- name: Backup existing issue.net file (RHEL)
+  ansible.builtin.copy:
+    src: /etc/issue.net
+    dest: /etc/issue.net.backup
+    remote_src: yes
+  become: yes
+  when: ansible_facts['os_family'] == 'RedHat'
+  ignore_errors: yes
+
+# MOTD handling (Debian/Ubuntu): include safety net and ASCII art generation
+- name: Check if MOTD exists and get size
+  ansible.builtin.stat:
+    path: /etc/motd
+  register: motd_stat
+  become: yes
+  when: ansible_facts['os_family'] != 'RedHat'
+  changed_when: false
+
+- name: Set facts for MOTD existence and size
+  ansible.builtin.set_fact:
+    motd_exists: "{{ motd_stat.stat.exists | default(false) }}"
+    motd_size: "{{ motd_stat.stat.size | default(0) }}"
+  when: ansible_facts['os_family'] != 'RedHat'
+
+- name: Install figlet for ASCII art MOTD
+  ansible.builtin.package:
+    name: figlet
+    state: present
+  become: yes
+  when:
+    - ansible_facts['os_family'] != 'RedHat'
+    - ascii_art_enabled | default(true)
+    - not (motd_exists | default(false) and motd_size | default(0) > (motd_size_threshold | default(300)))
+
+- name: Generate ASCII art for hostname
+  ansible.builtin.shell: |
+    figlet -f {{ ascii_font | default('big') }} "{{ ansible_hostname }}"
+  register: hostname_ascii_art
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_facts['os_family'] != 'RedHat'
+    - ascii_art_enabled | default(true)
+    - not (motd_exists | default(false) and motd_size | default(0) > (motd_size_threshold | default(300)))
+
+- name: Set ASCII art fact for hostname
+  ansible.builtin.set_fact:
+    hostname_ascii: "{{ hostname_ascii_art.stdout | default('') }}"
+  when:
+    - ansible_facts['os_family'] != 'RedHat'
+    - ascii_art_enabled | default(true)
+    - not (motd_exists | default(false) and motd_size | default(0) > (motd_size_threshold | default(300)))
+
+- name: Deploy MOTD template
+  ansible.builtin.template:
+    src: motd.j2
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  when:
+    - ansible_facts['os_family'] != 'RedHat'
+    - not (motd_exists | default(false) and motd_size | default(0) > (motd_size_threshold | default(300)))
+
+- name: Skip MOTD deployment - existing MOTD is larger than threshold, assuming custom ASCII art
+  ansible.builtin.debug:
+    msg: "Skipping MOTD deployment: existing /etc/motd is {{ motd_size }} bytes (threshold: {{ motd_size_threshold | default(300) }})."
+  when:
+    - ansible_facts['os_family'] != 'RedHat'
+    - motd_exists | default(false)
+    - motd_size | default(0) > (motd_size_threshold | default(300))
+
+# Configure issue file for RHEL (pre-login banner)
+- name: Deploy issue template (RHEL)
+  ansible.builtin.template:
+    src: issue.j2
+    dest: /etc/issue
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  when: ansible_facts['os_family'] == 'RedHat'
+
+# Configure issue.net file for RHEL (SSH pre-login banner)
+- name: Deploy issue.net template (RHEL)
+  ansible.builtin.template:
+    src: issue.net.j2
+    dest: /etc/issue.net
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  when: ansible_facts['os_family'] == 'RedHat'
+
+# Configure SSH Banner
+- name: Check if SSH banner is already configured
+  ansible.builtin.shell: grep -q "^Banner" /etc/ssh/sshd_config
+  register: ssh_banner_check
+  become: yes
+  changed_when: false
+  failed_when: false
+
+- name: Deploy SSH banner template
+  ansible.builtin.template:
+    src: ssh_banner.j2
+    dest: /etc/ssh/banner
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
+- name: Configure SSH to use banner
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?Banner'
+    line: 'Banner /etc/ssh/banner'
+    state: present
+  become: yes
+  notify: restart sshd
+
+- name: Ensure SSH config syntax is valid
+  ansible.builtin.command: sshd -t
+  become: yes
+  register: sshd_config_test
+  changed_when: false
+  failed_when: sshd_config_test.rc != 0
+

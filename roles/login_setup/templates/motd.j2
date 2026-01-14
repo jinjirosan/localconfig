@@ -1,0 +1,13 @@
+{% if ascii_art_enabled | default(true) and hostname_ascii is defined and hostname_ascii | length > 0 %}
+{{ hostname_ascii }}
+
+{% endif %}
+{{ login_banner_text | default('') }}
+
+{% if show_system_info | default(true) %}
+System Information:
+  Hostname: {{ ansible_hostname }}
+  OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+  Kernel: {{ ansible_kernel }}
+{% endif %}
+

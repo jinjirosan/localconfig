@@ -1,0 +1,9 @@
+{{ login_banner_text | default('') }}
+
+{% if show_system_info | default(true) %}
+System Information:
+  Hostname: {{ ansible_hostname }}
+  OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+  Kernel: {{ ansible_kernel }}
+{% endif %}
+

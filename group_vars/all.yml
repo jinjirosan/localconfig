@@ -16,5 +16,28 @@ debian_ubuntu_packages:
   - lsof
   - netcat-openbsd
   - pv
+  - figlet
+
+# Login Setup Configuration
+ascii_art_enabled: true
+ascii_font: "big"
+motd_size_threshold: 300  # Bytes; skip overwriting MOTD if existing file is larger than this
+
+login_banner_text: |
+  This is a private system. This computer system, including all related equipment, networks, and
+  network devices (specifically including Internet access) are provided only for authorized use.
+  Computer systems may be monitored for all lawful purposes, including to ensure that their use is
+  authorized, for management of the system, to facilitate protection against unauthorized access, and
+  to verify security procedures, survivability, and operational security. Monitoring includes active
+  attacks by authorized entities to test or verify the security of this system. During monitoring,
+  information may be examined, recorded, copied and used for authorized purposes. All information,
+  including personal information, placed or sent over this system may be monitored. Use of this
+  computer system, authorized or unauthorized, constitutes consent to monitoring of this system.
+  Unauthorized use may subject you to criminal prosecution. Evidence of unauthorized use collected
+  during action. Use of this system constitutes consent to monitoring for these purposes.
+
+  In short: if you were NOT given EXPLICIT permission to access this system, LEAVE NOW.
+show_system_info: true
+login_warning: true
 
 

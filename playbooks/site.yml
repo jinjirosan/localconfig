@@ -41,4 +41,5 @@
     - ssh_setup
     - tools_setup
     - vim_config
+    - login_setup
 
