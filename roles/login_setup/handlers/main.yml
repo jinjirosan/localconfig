@@ -1,16 +1,17 @@
 ---
 # Handlers for login_setup role
+# Note: Debian/Raspberry Pi OS uses service name 'ssh', others use 'sshd'
 
-- name: restart sshd
+- name: restart sshd (systemd)
   ansible.builtin.systemd:
-    name: sshd
+    name: "{{ 'ssh' if ansible_facts['os_family'] == 'Debian' else 'sshd' }}"
     state: restarted
   become: yes
   when: ansible_facts['service_mgr'] == 'systemd'
 
 - name: restart sshd (sysvinit)
   ansible.builtin.service:
-    name: sshd
+    name: "{{ 'ssh' if ansible_facts['os_family'] == 'Debian' else 'sshd' }}"
     state: restarted
   become: yes
   when: ansible_facts['service_mgr'] != 'systemd'
