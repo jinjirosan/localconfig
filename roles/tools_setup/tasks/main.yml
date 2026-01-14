@@ -26,6 +26,17 @@
     - rhel_release_check.stat.exists is defined
     - rhel_release_check.stat.exists
 
+# Set sudoers file path based on OS
+- name: Set sudoers path for FreeBSD
+  ansible.builtin.set_fact:
+    sudoers_path: "/usr/local/etc/sudoers"
+  when: ansible_facts['os_family'] == "FreeBSD"
+
+- name: Set sudoers path for Linux (Debian/Ubuntu/RHEL)
+  ansible.builtin.set_fact:
+    sudoers_path: "/etc/sudoers"
+  when: ansible_facts['os_family'] != "FreeBSD"
+
 # Install Sudo if Missing (Debian/Ubuntu)
 - name: Ensure sudo is installed on Debian/Ubuntu
   ansible.builtin.package:
@@ -36,7 +47,7 @@
 
 # Check if ansible_user is already in sudoers
 - name: Check if ansible_user is already in sudoers
-  ansible.builtin.shell: grep -Fxq "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL" /etc/sudoers
+  ansible.builtin.shell: grep -Fxq "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL" {{ sudoers_path }}
   register: sudoers_check
   become: yes
   failed_when: sudoers_check.rc not in [0, 1]

@@ -2,14 +2,19 @@
 ---
 - name: Initial Setup
   hosts: all
+  gather_facts: yes
   # Use ansible_user from inventory - don't override connection user
   vars:
     target_user: "{{ ansible_user | default(lookup('env', 'USER')) }}"
     # Convert target_user to list if it contains spaces (multiple users)
     target_users_list: "{{ (target_user is defined and target_user != 'all' and ' ' in target_user) | ternary(target_user.split(' '), (target_user is defined and target_user != 'all') | ternary([target_user], [])) }}"
   tasks:
+    - name: Set sudoers path based on OS
+      ansible.builtin.set_fact:
+        sudoers_path: "{{ '/usr/local/etc/sudoers' if ansible_facts['os_family'] == 'FreeBSD' else '/etc/sudoers' }}"
+
     - name: Check if target_user(s) are in sudoers
-      ansible.builtin.shell: grep -q "{{ item }} ALL=(ALL:ALL) NOPASSWD:ALL" /etc/sudoers
+      ansible.builtin.shell: grep -q "{{ item }} ALL=(ALL:ALL) NOPASSWD:ALL" {{ sudoers_path }}
       register: sudoers_check
       failed_when: sudoers_check.rc not in [0, 1]
       become: true
@@ -20,7 +25,7 @@
 
     - name: Add target_user(s) to sudoers
       ansible.builtin.shell: |
-        echo "{{ item.item }} ALL=(ALL:ALL) NOPASSWD:ALL" >> /etc/sudoers
+        echo "{{ item.item }} ALL=(ALL:ALL) NOPASSWD:ALL" >> {{ sudoers_path }}
       become: true
       loop: "{{ sudoers_check.results | default([]) }}"
       when: 

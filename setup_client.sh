@@ -253,8 +253,15 @@ chown "$ANSIBLE_USER:$ANSIBLE_USER" "$AUTHORIZED_KEYS"
 
 # Check if ansible user is already in sudoers
 printf "%b\n" "${YELLOW}Configuring sudo access for '$ANSIBLE_USER'...${NC}"
+# Set sudoers path based on OS
+if [ "$PKG_MANAGER" = "pkg" ]; then
+    SUDOERS_FILE="/usr/local/etc/sudoers"
+else
+    SUDOERS_FILE="/etc/sudoers"
+fi
+
 SUDOERS_ENTRY="$ANSIBLE_USER ALL=(ALL:ALL) NOPASSWD:ALL"
-if grep -Fxq "$SUDOERS_ENTRY" /etc/sudoers 2>/dev/null; then
+if grep -Fxq "$SUDOERS_ENTRY" "$SUDOERS_FILE" 2>/dev/null; then
     printf "%b\n" "${YELLOW}'$ANSIBLE_USER' is already in sudoers${NC}"
 else
     # Add to sudoers using visudo for safety
