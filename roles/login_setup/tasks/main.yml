@@ -131,6 +131,7 @@
     group: root
     mode: '0644'
   become: yes
+  notify: restart sshd
 
 - name: Configure SSH to use banner
   ansible.builtin.lineinfile:
@@ -141,7 +142,7 @@
   become: yes
   notify: restart sshd
 
-- name: Ensure SSH config syntax is valid
+- name: Ensure SSH config syntax is valid before restart
   ansible.builtin.command: sshd -t
   become: yes
   register: sshd_config_test

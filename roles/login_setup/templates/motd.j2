@@ -2,8 +2,6 @@
 {{ hostname_ascii }}
 
 {% endif %}
-{{ login_banner_text | default('') }}
-
 {% if show_system_info | default(true) %}
 System Information:
   Hostname: {{ ansible_hostname }}

@@ -3,8 +3,17 @@
 # Note: Debian/Raspberry Pi OS uses service name 'ssh', others use 'sshd'
 
 - name: restart sshd
-  ansible.builtin.service:
-    name: "{{ 'ssh' if ansible_facts['os_family'] == 'Debian' else 'sshd' }}"
-    state: restarted
-  become: yes
+  block:
+    - name: Verify SSH config syntax before restart
+      ansible.builtin.command: sshd -t
+      become: yes
+      register: sshd_syntax_check
+      changed_when: false
+      failed_when: sshd_syntax_check.rc != 0
+
+    - name: Restart SSH service
+      ansible.builtin.service:
+        name: "{{ 'ssh' if ansible_facts['os_family'] == 'Debian' else 'sshd' }}"
+        state: restarted
+      become: yes
 
