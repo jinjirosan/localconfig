@@ -56,25 +56,65 @@
 # Install Essential Tools (Debian/Ubuntu)
 - name: Install essential tools for Debian/Ubuntu
   ansible.builtin.package:
-    name: "{{ debian_ubuntu_packages }}"
+    name: "{{ item }}"
     state: present
   when: pkg_manager == "apt"
   become: yes
+  loop: "{{ debian_ubuntu_packages }}"
+  ignore_errors: yes
+  register: debian_package_results
+
+- name: Report any failed package installations (Debian/Ubuntu)
+  ansible.builtin.debug:
+    msg: "Warning: Package '{{ item.item }}' is not available and was skipped"
+  when: 
+    - pkg_manager == "apt"
+    - item is failed
+  loop: "{{ debian_package_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 # Install Essential Tools (FreeBSD)
 - name: Install essential tools for FreeBSD
   ansible.builtin.package:
-    name: "{{ freebsd_packages }}"
+    name: "{{ item }}"
     state: present
   when: pkg_manager == "pkg"
   become: yes
+  loop: "{{ freebsd_packages }}"
+  ignore_errors: yes
+  register: freebsd_package_results
+
+- name: Report any failed package installations (FreeBSD)
+  ansible.builtin.debug:
+    msg: "Warning: Package '{{ item.item }}' is not available and was skipped"
+  when: 
+    - pkg_manager == "pkg"
+    - item is failed
+  loop: "{{ freebsd_package_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 # Install Essential Tools (RHEL)
 - name: Install essential tools for RHEL
   ansible.builtin.package:
-    name: "{{ rhel_packages }}"
+    name: "{{ item }}"
     state: present
   when: pkg_manager == "yum"
+  become: yes
+  loop: "{{ rhel_packages }}"
+  ignore_errors: yes
+  register: rhel_package_results
+
+- name: Report any failed package installations (RHEL)
+  ansible.builtin.debug:
+    msg: "Warning: Package '{{ item.item }}' is not available and was skipped"
+  when: 
+    - pkg_manager == "yum"
+    - item is failed
+  loop: "{{ rhel_package_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 # Check Installed Package Status (Debian/Ubuntu)
 - name: Check package status on Debian/Ubuntu
@@ -101,6 +141,37 @@
   failed_when: "item not in package_check_rhel.stdout"
   loop: "{{ rhel_packages }}"
   when: pkg_manager == "yum"
+
+# Collect failed packages for summary
+- name: Collect failed packages (Debian/Ubuntu)
+  ansible.builtin.set_fact:
+    failed_packages: "{{ failed_packages | default([]) + [item.item] }}"
+  when: 
+    - pkg_manager == "apt"
+    - item is failed
+  loop: "{{ debian_package_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Collect failed packages (FreeBSD)
+  ansible.builtin.set_fact:
+    failed_packages: "{{ failed_packages | default([]) + [item.item] }}"
+  when: 
+    - pkg_manager == "pkg"
+    - item is failed
+  loop: "{{ freebsd_package_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Collect failed packages (RHEL)
+  ansible.builtin.set_fact:
+    failed_packages: "{{ failed_packages | default([]) + [item.item] }}"
+  when: 
+    - pkg_manager == "yum"
+    - item is failed
+  loop: "{{ rhel_package_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 # Debugging and Status Reporting
 - name: Display package statuses (Debian/Ubuntu)

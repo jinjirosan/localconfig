@@ -43,3 +43,41 @@
     - vim_config
     - login_setup
 
+- name: Installation Summary
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Set summary variables
+      ansible.builtin.set_fact:
+        summary_failed_packages: "{{ hostvars[inventory_hostname]['failed_packages'] | default([]) }}"
+        summary_os: "{{ hostvars[inventory_hostname]['ansible_distribution'] | default('Unknown') }}"
+        summary_os_version: "{{ hostvars[inventory_hostname]['ansible_distribution_version'] | default('') }}"
+    
+    - name: Display installation summary
+      ansible.builtin.debug:
+        msg: |
+          
+          ========================================
+          Installation Summary
+          ========================================
+          
+          Host: {{ inventory_hostname }}
+          OS: {{ summary_os }} {{ summary_os_version }}
+          
+          {% if summary_failed_packages | length > 0 %}
+          ⚠️  Packages that could not be installed:
+          {% for pkg in summary_failed_packages %}
+            - {{ pkg }}
+          {% endfor %}
+          
+          These packages are not available in your system's repositories.
+          You may need to:
+          1. Check if alternative package names exist
+          2. Add additional repositories
+          3. Install manually if needed
+          {% else %}
+          ✅ All packages installed successfully!
+          {% endif %}
+          
+          ========================================
+
