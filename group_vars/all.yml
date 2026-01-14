@@ -20,6 +20,7 @@ debian_ubuntu_packages:
 
 freebsd_packages:
   - sudo
+  - bash
   - vim
   - htop
   - screen

@@ -32,8 +32,24 @@
     - .vimrc
     - .screenrc
     - .bashrc
+    - .bash_profile
     - .curlrc
     - quick_ref_keybindings.txt
+
+# Get bash path for shell changes
+- name: Get bash path
+  ansible.builtin.command: command -v bash
+  register: bash_path
+  changed_when: false
+  failed_when: false
+
+# Change ansible_user shell to bash if available
+- name: Change ansible_user shell to bash if available
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    shell: "{{ bash_path.stdout }}"
+  become: yes
+  when: bash_path.rc == 0 and bash_path.stdout is defined and bash_path.stdout | length > 0
 
 - name: Ensure .vim directory exists in ansible user's home
   ansible.builtin.file:
@@ -112,7 +128,7 @@
     dest: "{{ item.1.stdout }}/{{ item.0 }}"
     owner: "{{ item.1.item }}"
     mode: '0644'
-  loop: "{{ ['.vimrc', '.screenrc', '.bashrc', '.curlrc', 'quick_ref_keybindings.txt'] | product(target_user_homes.results) | list }}"
+  loop: "{{ ['.vimrc', '.screenrc', '.bashrc', '.bash_profile', '.curlrc', 'quick_ref_keybindings.txt'] | product(target_user_homes.results) | list }}"
   when: 
     - target_user is defined 
     - target_user != ansible_user 
@@ -122,6 +138,24 @@
   become: yes
   loop_control:
     label: "{{ item.1.item }}: {{ item.0 }}"
+
+# Change target users' shells to bash if available
+- name: Change target users' shells to bash if available
+  ansible.builtin.user:
+    name: "{{ item.item }}"
+    shell: "{{ bash_path.stdout }}"
+  become: yes
+  when: 
+    - target_user is defined 
+    - target_user != ansible_user 
+    - target_user != "all"
+    - target_users_list | length > 0
+    - bash_path.rc == 0
+    - bash_path.stdout is defined
+    - bash_path.stdout | length > 0
+  loop: "{{ target_user_homes.results }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 - name: Ensure .vim directory exists in target users' homes
   ansible.builtin.file:
@@ -170,6 +204,31 @@
   loop: "{{ users_to_configure }}"
   when: target_user is defined and target_user == "all" and users_to_configure is defined
   become: yes
+
+- name: Copy .bash_profile to all users
+  ansible.builtin.copy:
+    src: "{{ files_dir }}/.bash_profile"
+    dest: "{{ user_homes[item] }}/.bash_profile"
+    owner: "{{ item }}"
+    mode: '0644'
+  loop: "{{ users_to_configure }}"
+  when: target_user is defined and target_user == "all" and users_to_configure is defined
+  become: yes
+
+# Change all users' shells to bash if available
+- name: Change all users' shells to bash if available
+  ansible.builtin.user:
+    name: "{{ item }}"
+    shell: "{{ bash_path.stdout }}"
+  become: yes
+  when: 
+    - target_user is defined 
+    - target_user == "all"
+    - users_to_configure is defined
+    - bash_path.rc == 0
+    - bash_path.stdout is defined
+    - bash_path.stdout | length > 0
+  loop: "{{ users_to_configure }}"
 
 - name: Copy .curlrc to all users
   ansible.builtin.copy:
@@ -222,9 +281,18 @@
     - .vimrc
     - .screenrc
     - .bashrc
+    - .bash_profile
     - .curlrc
     - quick_ref_keybindings.txt
   become: yes
+
+# Change root shell to bash if available
+- name: Change root shell to bash if available
+  ansible.builtin.user:
+    name: root
+    shell: "{{ bash_path.stdout }}"
+  become: yes
+  when: bash_path.rc == 0 and bash_path.stdout is defined and bash_path.stdout | length > 0
 
 - name: Ensure .vim directory exists in root's home
   ansible.builtin.file:
