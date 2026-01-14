@@ -35,6 +35,36 @@
   ignore_errors: yes
 
 # MOTD handling (Debian/Ubuntu/FreeBSD): include safety net and ASCII art generation
+# FreeBSD: /etc/motd is often a symlink to /var/run/motd (tmpfs, cleared on reboot)
+# We need to replace the symlink with a regular file so the MOTD persists
+- name: Check if /etc/motd is a symlink on FreeBSD
+  ansible.builtin.stat:
+    path: /etc/motd
+  register: motd_stat_freebsd
+  become: yes
+  when: ansible_facts['os_family'] == 'FreeBSD'
+  changed_when: false
+
+- name: Backup and remove /etc/motd symlink on FreeBSD, create regular file
+  ansible.builtin.shell: |
+    if [ -L /etc/motd ]; then
+      # Backup the symlink target content if it exists
+      if [ -f /var/run/motd ]; then
+        cp /var/run/motd /etc/motd.backup.symlink
+      fi
+      # Remove the symlink
+      rm -f /etc/motd
+      # Create a regular file
+      touch /etc/motd
+      chmod 644 /etc/motd
+    fi
+  become: yes
+  when: 
+    - ansible_facts['os_family'] == 'FreeBSD'
+    - motd_stat_freebsd.stat.islnk is defined
+    - motd_stat_freebsd.stat.islnk
+  ignore_errors: yes
+
 - name: Check if MOTD exists and get size
   ansible.builtin.stat:
     path: /etc/motd
@@ -89,6 +119,57 @@
   when:
     - ansible_facts['os_family'] != 'RedHat'
     - not (motd_exists | default(false) and (motd_size | default(0) | int) > (motd_size_threshold | default(300) | int))
+
+# FreeBSD: Ensure MOTD is displayed correctly
+# Check for .hushlogin files that might prevent MOTD display
+- name: Check for .hushlogin files that suppress MOTD
+  ansible.builtin.find:
+    paths:
+      - /root
+      - /home
+    patterns: ".hushlogin"
+    file_type: file
+    recurse: yes
+  register: hushlogin_files
+  become: yes
+  when: ansible_facts['os_family'] == 'FreeBSD'
+  ignore_errors: yes
+
+- name: Remove .hushlogin files to ensure MOTD is displayed
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  become: yes
+  when: 
+    - ansible_facts['os_family'] == 'FreeBSD'
+    - hushlogin_files.files is defined
+  loop: "{{ hushlogin_files.files | default([]) }}"
+  ignore_errors: yes
+
+# FreeBSD: The default welcome message might be from fortune or other programs
+# Check if fortune is being called in profile files
+- name: Check for fortune calls in user profile files
+  ansible.builtin.shell: |
+    find /home /root -maxdepth 2 -name ".profile" -o -name ".bash_profile" -o -name ".bashrc" 2>/dev/null | \
+    xargs grep -l "fortune" 2>/dev/null || true
+  register: fortune_profiles
+  become: yes
+  when: ansible_facts['os_family'] == 'FreeBSD'
+  changed_when: false
+  ignore_errors: yes
+
+- name: Comment out fortune calls in profile files
+  ansible.builtin.replace:
+    path: "{{ item }}"
+    regexp: '^(\s*)(.*fortune.*)'
+    replace: '\1# \2'
+  become: yes
+  when: 
+    - ansible_facts['os_family'] == 'FreeBSD'
+    - fortune_profiles.stdout is defined
+    - fortune_profiles.stdout | length > 0
+  loop: "{{ fortune_profiles.stdout_lines | default([]) }}"
+  ignore_errors: yes
 
 - name: Skip MOTD deployment - existing MOTD is larger than threshold, assuming custom ASCII art
   ansible.builtin.debug:
