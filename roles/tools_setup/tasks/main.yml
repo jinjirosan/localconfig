@@ -146,6 +146,75 @@
   loop: "{{ rhel_packages }}"
   when: pkg_manager == "yum"
 
+# Configure Locales (Debian/Ubuntu)
+- name: Install locales package (Debian/Ubuntu)
+  ansible.builtin.package:
+    name: locales
+    state: present
+  when: pkg_manager == "apt"
+  become: yes
+  ignore_errors: yes
+
+- name: Check if UTF-8 locale is already generated (Debian/Ubuntu)
+  ansible.builtin.command: locale -a | grep -q "en_US.utf8\|en_US.UTF-8"
+  register: locale_check
+  when: pkg_manager == "apt"
+  become: yes
+  failed_when: false
+  changed_when: false
+
+- name: Generate UTF-8 locales (Debian/Ubuntu)
+  ansible.builtin.command: locale-gen en_US.UTF-8
+  when: 
+    - pkg_manager == "apt"
+    - locale_check.rc != 0
+  become: yes
+  ignore_errors: yes
+
+- name: Update default locale (Debian/Ubuntu)
+  ansible.builtin.lineinfile:
+    path: /etc/default/locale
+    regexp: '^LANG='
+    line: 'LANG=en_US.UTF-8'
+    state: present
+    create: yes
+  when: pkg_manager == "apt"
+  become: yes
+
+# Configure Locales (RHEL)
+- name: Install glibc-langpack (RHEL)
+  ansible.builtin.package:
+    name: glibc-langpack-en
+    state: present
+  when: pkg_manager == "yum"
+  become: yes
+  ignore_errors: yes
+
+- name: Set locale in locale.conf (RHEL)
+  ansible.builtin.lineinfile:
+    path: /etc/locale.conf
+    regexp: '^LANG='
+    line: 'LANG=en_US.UTF-8'
+    state: present
+    create: yes
+  when: pkg_manager == "yum"
+  become: yes
+
+# Configure Locales (FreeBSD)
+# Note: FreeBSD typically has UTF-8 locales available by default
+# We'll set environment variables in profile files instead of modifying login.conf
+# to avoid breaking the system configuration
+- name: Set locale in /etc/profile (FreeBSD)
+  ansible.builtin.lineinfile:
+    path: /etc/profile
+    regexp: '^export LANG='
+    line: 'export LANG=en_US.UTF-8'
+    state: present
+    insertafter: EOF
+  when: pkg_manager == "pkg"
+  become: yes
+  ignore_errors: yes
+
 # Collect failed packages for summary
 - name: Collect failed packages (Debian/Ubuntu)
   ansible.builtin.set_fact:
