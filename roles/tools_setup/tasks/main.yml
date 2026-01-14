@@ -8,6 +8,11 @@
     pkg_manager: "apt"
   when: ansible_facts['os_family'] == "Debian"
 
+- name: Detect if system is FreeBSD
+  ansible.builtin.set_fact:
+    pkg_manager: "pkg"
+  when: ansible_facts['os_family'] == "FreeBSD"
+
 - name: Detect if system is RHEL-based
   ansible.builtin.stat:
     path: /etc/redhat-release
@@ -56,6 +61,14 @@
   when: pkg_manager == "apt"
   become: yes
 
+# Install Essential Tools (FreeBSD)
+- name: Install essential tools for FreeBSD
+  ansible.builtin.package:
+    name: "{{ freebsd_packages }}"
+    state: present
+  when: pkg_manager == "pkg"
+  become: yes
+
 # Install Essential Tools (RHEL)
 - name: Install essential tools for RHEL
   ansible.builtin.package:
@@ -71,6 +84,15 @@
   loop: "{{ debian_ubuntu_packages }}"
   when: pkg_manager == "apt"
 
+# Check Installed Package Status (FreeBSD)
+- name: Check package status on FreeBSD
+  ansible.builtin.command: pkg info {{ item }}
+  register: package_check_freebsd
+  changed_when: false
+  failed_when: package_check_freebsd.rc != 0
+  loop: "{{ freebsd_packages }}"
+  when: pkg_manager == "pkg"
+
 # Check Installed Package Status (RHEL)
 - name: Check package status on RHEL
   ansible.builtin.command: dnf list installed {{ item }}
@@ -85,6 +107,11 @@
   ansible.builtin.debug:
     var: package_check.results
   when: pkg_manager == "apt"
+
+- name: Display package statuses (FreeBSD)
+  ansible.builtin.debug:
+    var: package_check_freebsd.results
+  when: pkg_manager == "pkg"
 
 - name: Display package statuses (RHEL)
   ansible.builtin.debug:

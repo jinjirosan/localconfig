@@ -6,10 +6,18 @@
   ansible.builtin.command: cat /etc/os-release
   register: os_release
   changed_when: false
+  failed_when: false
+  when: ansible_facts['os_family'] != 'FreeBSD'
 
 - name: Set fact if the system is Debian/Ubuntu
   ansible.builtin.set_fact:
     is_debian_or_ubuntu: "{{ 'ID=debian' in os_release.stdout or 'ID=ubuntu' in os_release.stdout }}"
+  when: ansible_facts['os_family'] != 'FreeBSD' and os_release.rc == 0
+
+- name: Set fact for FreeBSD (no os-release file)
+  ansible.builtin.set_fact:
+    is_debian_or_ubuntu: false
+  when: ansible_facts['os_family'] == 'FreeBSD'
 
 - name: Ensure SSH key is present on control machine
   ansible.builtin.openssh_keypair:

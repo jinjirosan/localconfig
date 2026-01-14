@@ -77,13 +77,35 @@ if [ ! -f "playbooks/site.yml" ] || [ ! -d "roles" ]; then
     exit 1
 fi
 
+# Detect OS for Ansible installation and Python path
+if [ -f /etc/debian_version ]; then
+    OS_TYPE="debian"
+    PYTHON_INTERPRETER="/usr/bin/python3"
+elif [ -f /etc/redhat-release ]; then
+    OS_TYPE="rhel"
+    PYTHON_INTERPRETER="/usr/bin/python3"
+elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
+    OS_TYPE="freebsd"
+    PYTHON_INTERPRETER="/usr/local/bin/python3"
+else
+    OS_TYPE="unknown"
+    PYTHON_INTERPRETER="/usr/bin/python3"
+fi
+
+# Verify Python interpreter exists, try to find it if default path doesn't work
+if [ ! -f "$PYTHON_INTERPRETER" ]; then
+    PYTHON_INTERPRETER=$(command -v python3 2>/dev/null || echo "$PYTHON_INTERPRETER")
+fi
+
 # Ensure Ansible is installed
 if ! command -v ansible > /dev/null; then
     echo -e "${YELLOW}Ansible is not installed. Installing Ansible...${NC}"
-    if [ -f /etc/debian_version ]; then
+    if [ "$OS_TYPE" = "debian" ]; then
         sudo apt update && sudo apt install ansible -y
-    elif [ -f /etc/redhat-release ]; then
+    elif [ "$OS_TYPE" = "rhel" ]; then
         sudo yum install epel-release -y && sudo yum install ansible -y
+    elif [ "$OS_TYPE" = "freebsd" ]; then
+        sudo pkg install -y ansible
     else
         echo -e "${RED}Unsupported OS. Please install Ansible manually.${NC}"
         exit 1
@@ -98,14 +120,14 @@ if [ ! -f hosts.ini ]; then
     echo -e "${YELLOW}Creating hosts.ini file...${NC}"
     cat > hosts.ini <<EOF
 [local]
-localhost ansible_connection=local ansible_user=$CURRENT_USER ansible_become=yes ansible_python_interpreter=/usr/bin/python3
+localhost ansible_connection=local ansible_user=$CURRENT_USER ansible_become=yes ansible_python_interpreter=$PYTHON_INTERPRETER
 EOF
     echo -e "${GREEN}Generated hosts.ini with a [local] section.${NC}"
 else
-    # Update hosts.ini to ensure it has correct ansible_user
+    # Update hosts.ini to ensure it has correct ansible_user and python interpreter
     if ! grep -q "^localhost.*ansible_user=" hosts.ini 2>/dev/null; then
-        echo -e "${YELLOW}Updating hosts.ini with current user...${NC}"
-        sed -i.bak "s|^localhost.*|localhost ansible_connection=local ansible_user=$CURRENT_USER ansible_become=yes ansible_python_interpreter=/usr/bin/python3|" hosts.ini
+        echo -e "${YELLOW}Updating hosts.ini with current user and Python interpreter...${NC}"
+        sed -i.bak "s|^localhost.*|localhost ansible_connection=local ansible_user=$CURRENT_USER ansible_become=yes ansible_python_interpreter=$PYTHON_INTERPRETER|" hosts.ini
         [ -f hosts.ini.bak ] && rm hosts.ini.bak
     fi
 fi

@@ -29,7 +29,7 @@
   when: ansible_facts['os_family'] == 'RedHat'
   ignore_errors: yes
 
-# MOTD handling (Debian/Ubuntu): include safety net and ASCII art generation
+# MOTD handling (Debian/Ubuntu/FreeBSD): include safety net and ASCII art generation
 - name: Check if MOTD exists and get size
   ansible.builtin.stat:
     path: /etc/motd

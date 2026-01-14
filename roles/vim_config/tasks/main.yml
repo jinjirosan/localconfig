@@ -12,6 +12,17 @@
   ansible.builtin.set_fact:
     vim_version: "{{ vim_version_result.stdout | regex_replace('\\.', '') }}"
 
+# Detect Vim base directory (FreeBSD uses /usr/local/share/vim, others use /usr/share/vim)
+- name: Set Vim base directory
+  ansible.builtin.set_fact:
+    vim_base_dir: "/usr/local/share/vim"
+  when: ansible_facts['os_family'] == 'FreeBSD'
+
+- name: Set Vim base directory for non-FreeBSD
+  ansible.builtin.set_fact:
+    vim_base_dir: "/usr/share/vim"
+  when: ansible_facts['os_family'] != 'FreeBSD'
+
 # Copy Configuration Files to Ansible User's Home Directory
 - name: Copy configuration files to ansible user's home directory
   ansible.builtin.copy:
@@ -234,26 +245,26 @@
 # Configure Vim Colors, Plugins, and Autoload
 - name: Ensure Vim colors directory exists
   ansible.builtin.file:
-    path: "/usr/share/vim/vim{{ vim_version }}/colors"
+    path: "{{ vim_base_dir }}/vim{{ vim_version }}/colors"
     state: directory
   become: yes
 
 - name: Copy badwolf.vim color theme to Vim colors directory
   ansible.builtin.copy:
     src: "{{ files_dir }}/colors/badwolf.vim"
-    dest: "/usr/share/vim/vim{{ vim_version }}/colors/badwolf.vim"
+    dest: "{{ vim_base_dir }}/vim{{ vim_version }}/colors/badwolf.vim"
   become: yes
 
 - name: Ensure Vim plugin directory exists
   ansible.builtin.file:
-    path: "/usr/share/vim/vim{{ vim_version }}/plugin"
+    path: "{{ vim_base_dir }}/vim{{ vim_version }}/plugin"
     state: directory
   become: yes
 
 - name: Copy Vim plugin files
   ansible.builtin.copy:
     src: "{{ files_dir }}/plugin/{{ item }}"
-    dest: "/usr/share/vim/vim{{ vim_version }}/plugin/{{ item }}"
+    dest: "{{ vim_base_dir }}/vim{{ vim_version }}/plugin/{{ item }}"
   loop:
     - airline.vim
     - airline-themes.vim
@@ -261,7 +272,7 @@
 
 - name: Ensure Vim autoload directory exists
   ansible.builtin.file:
-    path: "/usr/share/vim/vim{{ vim_version }}/autoload"
+    path: "{{ vim_base_dir }}/vim{{ vim_version }}/autoload"
     state: directory
   become: yes
 
@@ -276,7 +287,7 @@
 
 - name: Extract directory paths for autoload subdirectories
   ansible.builtin.set_fact:
-    autoload_dirs: "{{ autoload_dirs | default([]) + [('/usr/share/vim/vim' + vim_version + '/autoload/' + (item.path | regex_replace('^.*/autoload/', '') | dirname))] }}"
+    autoload_dirs: "{{ autoload_dirs | default([]) + [(vim_base_dir + '/vim' + vim_version + '/autoload/' + (item.path | regex_replace('^.*/autoload/', '') | dirname))] }}"
   loop: "{{ autoload_files.files }}"
   when: (item.path | regex_replace('^.*/autoload/', '') | dirname) != '.'
 
@@ -291,7 +302,7 @@
 - name: Copy each autoload file to remote host
   ansible.builtin.copy:
     src: "{{ item.path }}"
-    dest: "/usr/share/vim/vim{{ vim_version }}/autoload/{{ item.path | regex_replace('^.*/autoload/', '') }}"
+    dest: "{{ vim_base_dir }}/vim{{ vim_version }}/autoload/{{ item.path | regex_replace('^.*/autoload/', '') }}"
     mode: preserve
   loop: "{{ autoload_files.files }}"
   become: yes

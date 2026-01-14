@@ -17,6 +17,7 @@ CONTROL_USER=$(whoami)
 SSH_KEY_PATH="$HOME/.ssh/id_rsa.pub"
 HOSTS_INI="hosts.ini"
 TARGET_USER=""
+PYTHON_INTERPRETER="/usr/bin/python3"  # Default, will be detected if SSH works
 
 # Colors for output
 RED='\033[0;31m'
@@ -121,10 +122,35 @@ fi
 SSH_PUBLIC_KEY=$(cat "$SSH_KEY_PATH")
 echo -e "${GREEN}Using SSH public key from: $SSH_KEY_PATH${NC}"
 
-# Test SSH connectivity to remote host
+# Test SSH connectivity to remote host and detect OS
 echo -e "${YELLOW}Testing SSH connectivity to $REMOTE_HOST...${NC}"
 if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$ANSIBLE_USER@$REMOTE_HOST" "echo 'Connection successful'" 2>/dev/null; then
     echo -e "${GREEN}SSH connection successful${NC}"
+    
+    # Detect remote OS and set Python interpreter path
+    echo -e "${YELLOW}Detecting remote OS...${NC}"
+    REMOTE_OS=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$ANSIBLE_USER@$REMOTE_HOST" \
+        "if [ -f /etc/debian_version ]; then echo 'debian'; \
+         elif [ -f /etc/redhat-release ]; then echo 'rhel'; \
+         elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then echo 'freebsd'; \
+         else echo 'unknown'; fi" 2>/dev/null)
+    
+    case "$REMOTE_OS" in
+        freebsd)
+            PYTHON_INTERPRETER="/usr/local/bin/python3"
+            echo -e "${GREEN}Detected FreeBSD on remote host${NC}"
+            ;;
+        debian|rhel|unknown)
+            PYTHON_INTERPRETER="/usr/bin/python3"
+            if [ "$REMOTE_OS" = "debian" ]; then
+                echo -e "${GREEN}Detected Debian/Ubuntu on remote host${NC}"
+            elif [ "$REMOTE_OS" = "rhel" ]; then
+                echo -e "${GREEN}Detected RHEL/CentOS on remote host${NC}"
+            else
+                echo -e "${YELLOW}Could not detect OS, using default Python path${NC}"
+            fi
+            ;;
+    esac
 else
     echo -e "${RED}Error: Cannot connect to $REMOTE_HOST as $ANSIBLE_USER${NC}"
     echo ""
@@ -153,10 +179,10 @@ fi
 # Check if remote host already exists in hosts.ini
 if grep -q "^$REMOTE_HOST" "$HOSTS_INI" 2>/dev/null; then
     echo -e "${YELLOW}Remote host $REMOTE_HOST already exists in hosts.ini${NC}"
-    # Update the entry to ensure it has correct ansible_user
+    # Update the entry to ensure it has correct ansible_user and python interpreter
     if grep -q "^$REMOTE_HOST.*ansible_user=" "$HOSTS_INI"; then
         # Update existing entry
-        sed -i.bak "s|^$REMOTE_HOST.*|$REMOTE_HOST ansible_user=$ANSIBLE_USER ansible_python_interpreter=/usr/bin/python3|" "$HOSTS_INI"
+        sed -i.bak "s|^$REMOTE_HOST.*|$REMOTE_HOST ansible_user=$ANSIBLE_USER ansible_python_interpreter=$PYTHON_INTERPRETER|" "$HOSTS_INI"
     fi
 else
     echo -e "${YELLOW}Adding $REMOTE_HOST to hosts.ini...${NC}"
@@ -164,13 +190,13 @@ else
     if grep -q "^\[remote\]" "$HOSTS_INI"; then
         # Add after [remote] line
         sed -i.bak "/^\[remote\]/a\\
-$REMOTE_HOST ansible_user=$ANSIBLE_USER ansible_python_interpreter=/usr/bin/python3" "$HOSTS_INI"
+$REMOTE_HOST ansible_user=$ANSIBLE_USER ansible_python_interpreter=$PYTHON_INTERPRETER" "$HOSTS_INI"
     else
         # Add [remote] section and host
         cat >> "$HOSTS_INI" <<EOF
 
 [remote]
-$REMOTE_HOST ansible_user=$ANSIBLE_USER ansible_python_interpreter=/usr/bin/python3
+$REMOTE_HOST ansible_user=$ANSIBLE_USER ansible_python_interpreter=$PYTHON_INTERPRETER
 EOF
     fi
     echo -e "${GREEN}Remote host added to hosts.ini${NC}"

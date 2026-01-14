@@ -100,8 +100,13 @@ elif [ -f /etc/redhat-release ]; then
     UPDATE_CMD="yum check-update || true"
     INSTALL_CMD="yum install -y"
     echo -e "${GREEN}Detected RHEL/CentOS system${NC}"
+elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
+    PKG_MANAGER="pkg"
+    UPDATE_CMD="pkg update"
+    INSTALL_CMD="pkg install -y"
+    echo -e "${GREEN}Detected FreeBSD system${NC}"
 else
-    echo -e "${RED}Error: Unsupported OS. This script supports Debian/Ubuntu and RHEL/CentOS${NC}"
+    echo -e "${RED}Error: Unsupported OS. This script supports Debian/Ubuntu, RHEL/CentOS, and FreeBSD${NC}"
     exit 1
 fi
 
@@ -120,6 +125,14 @@ elif [ "$PKG_MANAGER" = "yum" ]; then
         $INSTALL_CMD epel-release || true
     fi
     $INSTALL_CMD git sudo sshpass python3 python3-pip
+elif [ "$PKG_MANAGER" = "pkg" ]; then
+    # FreeBSD: sshpass is not available, use py39-pip or py310-pip based on Python version
+    PYTHON_VERSION=$(python3 --version 2>/dev/null | awk '{print $2}' | cut -d. -f1,2 | tr -d '.')
+    if [ -z "$PYTHON_VERSION" ]; then
+        PYTHON_VERSION="39"  # Default to Python 3.9
+    fi
+    $INSTALL_CMD git sudo python${PYTHON_VERSION} py${PYTHON_VERSION}-pip
+    echo -e "${YELLOW}Note: sshpass is not available on FreeBSD. SSH key setup will work without it.${NC}"
 fi
 
 # Verify Python3 is installed

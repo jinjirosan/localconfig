@@ -1,6 +1,6 @@
 
 ansible_user: <add_local_user>
-pkg_manager: "{{ 'apt' if ansible_facts['os_family'] == 'Debian' else 'yum' }}"
+pkg_manager: "{{ 'apt' if ansible_facts['os_family'] == 'Debian' else ('pkg' if ansible_facts['os_family'] == 'FreeBSD' else 'yum') }}"
 debian_ubuntu_packages:
   - sudo
   - vim
@@ -15,6 +15,22 @@ debian_ubuntu_packages:
   - mlocate
   - lsof
   - netcat-openbsd
+  - pv
+  - figlet
+
+freebsd_packages:
+  - sudo
+  - vim
+  - htop
+  - screen
+  - git
+  - fusefs-smbnetfs  # SMB/CIFS support (equivalent to cifs-utils)
+  - gnupg
+  - curl
+  - gcc
+  - mlocate
+  - lsof
+  - netcat
   - pv
   - figlet
 
