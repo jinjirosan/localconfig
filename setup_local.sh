@@ -10,6 +10,7 @@ set -e
 # Get the currently logged-in user
 CURRENT_USER=$(whoami)
 TARGET_USER=""
+ADDITIONAL_SUDO_USERS=""
 REPLACE_MOTD="no"  # Default to no, will be set by preview_motd function
 
 # Colors for output
@@ -66,6 +67,42 @@ select_target_user() {
     esac
 }
 
+# Function to select additional users for passwordless sudo
+select_additional_sudo_users() {
+    echo ""
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}Additional Sudo Users${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    echo "Which additional users should be added to passwordless sudo?"
+    echo ""
+    if [ "$TARGET_USER" = "all" ]; then
+        echo -e "${YELLOW}Note: You selected 'All users' above.${NC}"
+        echo -e "${YELLOW}All users in /home/ will already get localconfig dotfiles and sudo access.${NC}"
+        echo -e "${YELLOW}Additional users listed here will only get sudo access (if not already covered).${NC}"
+    else
+        echo -e "${YELLOW}Note: These users will get NOPASSWD sudo access but will NOT get localconfig dotfiles${NC}"
+        echo -e "${YELLOW}unless you selected option 3 (All users) in the previous question.${NC}"
+        echo ""
+        echo -e "${YELLOW}The target user(s) you selected above will already get both sudo access and dotfiles.${NC}"
+    fi
+    echo ""
+    read -p "Enter username(s) (space-separated) or press Enter to skip: " ADDITIONAL_SUDO_USERS
+    ADDITIONAL_SUDO_USERS=${ADDITIONAL_SUDO_USERS:-""}
+    
+    if [ -n "$ADDITIONAL_SUDO_USERS" ]; then
+        # Count number of users (split by space)
+        SUDO_USER_COUNT=$(echo "$ADDITIONAL_SUDO_USERS" | wc -w | tr -d ' ')
+        if [ "$SUDO_USER_COUNT" -eq 1 ]; then
+            echo -e "${GREEN}Will add '$ADDITIONAL_SUDO_USERS' to passwordless sudo${NC}"
+        else
+            echo -e "${GREEN}Will add $SUDO_USER_COUNT users to passwordless sudo: $ADDITIONAL_SUDO_USERS${NC}"
+        fi
+    else
+        echo -e "${YELLOW}No additional users will be added to sudoers${NC}"
+    fi
+}
+
 echo -e "${GREEN}Preparing to deploy localconfig to local machine...${NC}"
 
 # Navigate to script directory (localconfig repo root)
@@ -116,6 +153,9 @@ fi
 # Select target user interactively
 select_target_user
 
+# Select additional sudo users
+select_additional_sudo_users
+
 # Ensure hosts.ini exists and is correctly configured
 if [ ! -f hosts.ini ]; then
     echo -e "${YELLOW}Creating hosts.ini file...${NC}"
@@ -152,9 +192,9 @@ echo ""
 
 # Always pass target_user explicitly (ansible_user comes from hosts.ini)
 if [ "$TARGET_USER" = "all" ]; then
-    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=all replace_motd=$REPLACE_MOTD" $NEED_BECOME_PASS
+    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=all replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS'" $NEED_BECOME_PASS
 else
-    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD" $NEED_BECOME_PASS
+    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS'" $NEED_BECOME_PASS
 fi
 
 # Check result

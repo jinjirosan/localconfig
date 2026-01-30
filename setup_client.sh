@@ -43,19 +43,24 @@ get_ssh_key() {
     printf "%b\n" "${BLUE}========================================${NC}"
     printf "\n"
     printf "Please select an option:\n"
-    printf "  1) Use default control machine SSH key (recommended)\n"
-    printf "  2) Enter/paste a custom SSH public key\n"
+    printf "  1) Use default control machine SSH key (may not match your control host)\n"
+    printf "  2) Enter/paste a custom SSH public key (recommended)\n"
     printf "\n"
-    printf "Enter your choice [1-2] (default: 1): "
+    printf "%b\n" "${YELLOW}Note: Option 2 is recommended to avoid key mismatches.${NC}"
+    printf "%b\n" "${YELLOW}Get your key from the control host with: cat ~/.ssh/id_rsa.pub${NC}"
+    printf "\n"
+    printf "Enter your choice [1-2] (default: 2): "
     read choice
     if [ -z "$choice" ]; then
-        choice=1
+        choice=2
     fi
     
     case $choice in
         1)
             CONTROL_HOST_SSH_KEY="$DEFAULT_SSH_KEY"
-            printf "%b\n" "${GREEN}Using default control machine SSH key${NC}"
+            printf "%b\n" "${YELLOW}Using default control machine SSH key${NC}"
+            printf "%b\n" "${YELLOW}Warning: This may not match your actual control host key!${NC}"
+            printf "%b\n" "${YELLOW}If setup_remote.sh fails, re-run this script with option 2 and your actual key.${NC}"
             ;;
         2)
             printf "\n"

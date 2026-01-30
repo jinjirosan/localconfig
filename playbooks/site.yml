@@ -8,6 +8,8 @@
     target_user: "{{ ansible_user | default(lookup('env', 'USER')) }}"
     # Convert target_user to list if it contains spaces (multiple users)
     target_users_list: "{{ (target_user is defined and target_user != 'all' and ' ' in target_user) | ternary(target_user.split(' '), (target_user is defined and target_user != 'all') | ternary([target_user], [])) }}"
+    # Convert additional_sudo_users to list if provided (space-separated)
+    additional_sudo_users_list: "{{ (additional_sudo_users is defined and additional_sudo_users != '' and ' ' in additional_sudo_users) | ternary(additional_sudo_users.split(' '), (additional_sudo_users is defined and additional_sudo_users != '') | ternary([additional_sudo_users], [])) }}"
   tasks:
     - name: Set sudoers path based on OS
       ansible.builtin.set_fact:
@@ -32,6 +34,28 @@
         - target_user is defined 
         - target_user != "all"
         - target_users_list | length > 0
+        - item.rc == 1
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Check if additional_sudo_users are in sudoers
+      ansible.builtin.shell: grep -q "{{ item }} ALL=(ALL:ALL) NOPASSWD:ALL" {{ sudoers_path }}
+      register: additional_sudoers_check
+      failed_when: additional_sudoers_check.rc not in [0, 1]
+      become: true
+      loop: "{{ additional_sudo_users_list }}"
+      when: additional_sudo_users_list is defined and additional_sudo_users_list | length > 0
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Add additional_sudo_users to sudoers
+      ansible.builtin.shell: |
+        echo "{{ item.item }} ALL=(ALL:ALL) NOPASSWD:ALL" >> {{ sudoers_path }}
+      become: true
+      loop: "{{ additional_sudoers_check.results | default([]) }}"
+      when: 
+        - additional_sudo_users_list is defined
+        - additional_sudo_users_list | length > 0
         - item.rc == 1
       loop_control:
         label: "{{ item.item }}"

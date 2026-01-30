@@ -17,6 +17,7 @@ CONTROL_USER=$(whoami)
 SSH_KEY_PATH="$HOME/.ssh/id_rsa.pub"
 HOSTS_INI="hosts.ini"
 TARGET_USER=""
+ADDITIONAL_SUDO_USERS=""
 REPLACE_MOTD="no"  # Default to no, will be set by preview_motd function
 PYTHON_INTERPRETER="/usr/bin/python3"  # Default, will be detected if SSH works
 
@@ -87,6 +88,42 @@ select_target_user() {
     esac
 }
 
+# Function to select additional users for passwordless sudo
+select_additional_sudo_users() {
+    echo ""
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}Additional Sudo Users${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    echo "Which additional users should be added to passwordless sudo?"
+    echo ""
+    if [ "$TARGET_USER" = "all" ]; then
+        echo -e "${YELLOW}Note: You selected 'All users' above.${NC}"
+        echo -e "${YELLOW}All users in /home/ will already get localconfig dotfiles and sudo access.${NC}"
+        echo -e "${YELLOW}Additional users listed here will only get sudo access (if not already covered).${NC}"
+    else
+        echo -e "${YELLOW}Note: These users will get NOPASSWD sudo access but will NOT get localconfig dotfiles${NC}"
+        echo -e "${YELLOW}unless you selected option 3 (All users) in the previous question.${NC}"
+        echo ""
+        echo -e "${YELLOW}The target user(s) you selected above will already get both sudo access and dotfiles.${NC}"
+    fi
+    echo ""
+    read -p "Enter username(s) (space-separated) or press Enter to skip: " ADDITIONAL_SUDO_USERS
+    ADDITIONAL_SUDO_USERS=${ADDITIONAL_SUDO_USERS:-""}
+    
+    if [ -n "$ADDITIONAL_SUDO_USERS" ]; then
+        # Count number of users (split by space)
+        SUDO_USER_COUNT=$(echo "$ADDITIONAL_SUDO_USERS" | wc -w | tr -d ' ')
+        if [ "$SUDO_USER_COUNT" -eq 1 ]; then
+            echo -e "${GREEN}Will add '$ADDITIONAL_SUDO_USERS' to passwordless sudo${NC}"
+        else
+            echo -e "${GREEN}Will add $SUDO_USER_COUNT users to passwordless sudo: $ADDITIONAL_SUDO_USERS${NC}"
+        fi
+    else
+        echo -e "${YELLOW}No additional users will be added to sudoers${NC}"
+    fi
+}
+
 # Function to preview MOTD and ask for replacement confirmation
 preview_motd() {
     echo ""
@@ -108,7 +145,7 @@ preview_motd() {
     # Get current MOTD content
     echo -e "${YELLOW}Current MOTD content from $MOTD_FILE:${NC}"
     echo ""
-    CURRENT_MOTD=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$ANSIBLE_USER@$REMOTE_HOST" "cat $MOTD_FILE 2>/dev/null || echo '(File does not exist or is empty)'")
+    CURRENT_MOTD=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o PreferredAuthentications=publickey "$ANSIBLE_USER@$REMOTE_HOST" "cat $MOTD_FILE 2>/dev/null || echo '(File does not exist or is empty)'")
     echo -e "${YELLOW}$CURRENT_MOTD${NC}"
     echo ""
     echo -e "${YELLOW}The new MOTD will contain ASCII art of the hostname and system information.${NC}"
@@ -130,6 +167,9 @@ preview_motd() {
 
 # Select target user interactively
 select_target_user
+
+# Select additional sudo users
+select_additional_sudo_users
 
 echo -e "${GREEN}Preparing to deploy localconfig to remote host: $REMOTE_HOST${NC}"
 
@@ -166,12 +206,12 @@ echo -e "${GREEN}Using SSH public key from: $SSH_KEY_PATH${NC}"
 
 # Test SSH connectivity to remote host and detect OS
 echo -e "${YELLOW}Testing SSH connectivity to $REMOTE_HOST...${NC}"
-if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$ANSIBLE_USER@$REMOTE_HOST" "echo 'Connection successful'" 2>/dev/null; then
+if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o PreferredAuthentications=publickey "$ANSIBLE_USER@$REMOTE_HOST" "echo 'Connection successful'" 2>/dev/null; then
     echo -e "${GREEN}SSH connection successful${NC}"
     
     # Detect remote OS and set Python interpreter path
     echo -e "${YELLOW}Detecting remote OS...${NC}"
-    REMOTE_OS=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$ANSIBLE_USER@$REMOTE_HOST" \
+    REMOTE_OS=$(ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o PreferredAuthentications=publickey "$ANSIBLE_USER@$REMOTE_HOST" \
         "if [ -f /etc/debian_version ]; then echo 'debian'; \
          elif [ -f /etc/redhat-release ]; then echo 'rhel'; \
          elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then echo 'freebsd'; \
@@ -197,15 +237,29 @@ if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$ANSIBLE_USER@$REMOTE_HO
     # Preview MOTD and ask for replacement (after SSH connectivity is confirmed)
     preview_motd
 else
-    echo -e "${RED}Error: Cannot connect to $REMOTE_HOST as $ANSIBLE_USER${NC}"
+    echo -e "${RED}Error: Cannot connect to $REMOTE_HOST as $ANSIBLE_USER using SSH key authentication${NC}"
     echo ""
-    echo "Please ensure:"
-    echo "  1. You have run setup_client.sh on the remote VM"
-    echo "  2. The remote VM is accessible from this host"
-    echo "  3. The SSH key has been added to the remote VM"
+    echo -e "${YELLOW}This usually means the SSH key mismatch between setup_client.sh and setup_remote.sh${NC}"
     echo ""
-    echo "To prepare the remote VM, copy setup_client.sh to it and run:"
+    echo "Diagnostics:"
+    echo "  - Control host SSH public key: $SSH_KEY_PATH"
+    echo "  - Key fingerprint: $(ssh-keygen -lf "$SSH_KEY_PATH" 2>/dev/null | awk '{print $2}' || echo 'N/A')"
+    echo ""
+    echo -e "${YELLOW}Root Cause:${NC}"
+    echo "  setup_client.sh may have used a hardcoded default key (option 1)"
+    echo "  that doesn't match your control host's actual key at $SSH_KEY_PATH"
+    echo ""
+    echo -e "${GREEN}Quick Fix - Run this on the remote VM:${NC}"
     echo "  ./setup_client.sh \"$SSH_PUBLIC_KEY\""
+    echo ""
+    echo -e "${GREEN}Or manually add the key (as root on remote VM):${NC}"
+    echo "  echo \"$SSH_PUBLIC_KEY\" >> ~ansible/.ssh/authorized_keys"
+    echo "  chmod 600 ~ansible/.ssh/authorized_keys"
+    echo "  chown ansible:ansible ~ansible/.ssh/authorized_keys"
+    echo ""
+    echo -e "${YELLOW}To prevent this in the future:${NC}"
+    echo "  When running setup_client.sh, choose option 2 and paste the key from:"
+    echo "  cat $SSH_KEY_PATH"
     exit 1
 fi
 
@@ -282,9 +336,9 @@ echo ""
 # Explicitly set the remote user to ensure it's used
 # Note: No --ask-become-pass needed since setup_client.sh configures NOPASSWD sudo for ansible user
 if [ "$TARGET_USER" = "all" ]; then
-    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=all replace_motd=$REPLACE_MOTD"
+    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=all replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS'"
 else
-    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD"
+    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS'"
 fi
 
 # Check result
