@@ -8,6 +8,7 @@
     owner: root
     group: root
     mode: '0755'
+  become: yes
 
 - name: Deploy journald drop-in for security_setup limits
   ansible.builtin.template:
@@ -16,9 +17,11 @@
     owner: root
     group: root
     mode: '0644'
+  become: yes
 
 - name: Restart journald to apply limits
   ansible.builtin.systemd:
     name: systemd-journald
     state: restarted
+  become: yes
   ignore_errors: yes  # may not have permission or service might not allow restart

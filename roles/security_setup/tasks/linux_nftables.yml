@@ -7,18 +7,21 @@
     state: stopped
     enabled: false
     masked: true
+  become: yes
   when: ansible_facts['os_family'] == 'RedHat'
 
 - name: Install nftables (Debian/Ubuntu)
   ansible.builtin.package:
     name: nftables
     state: present
+  become: yes
   when: ansible_facts['os_family'] == 'Debian'
 
 - name: Install nftables (RHEL)
   ansible.builtin.package:
     name: nftables
     state: present
+  become: yes
   when: ansible_facts['os_family'] == 'RedHat'
 
 - name: Deploy nftables rules file
@@ -28,9 +31,11 @@
     owner: root
     group: root
     mode: '0600'
+  become: yes
 
 - name: Flush and load nftables rules
   ansible.builtin.command: nft -f /etc/nftables.conf
+  become: yes
   changed_when: true
 
 - name: Enable and start nftables service (Debian)
@@ -38,6 +43,7 @@
     name: nftables
     state: started
     enabled: true
+  become: yes
   when: ansible_facts['os_family'] == 'Debian'
 
 - name: Enable and start nftables service (RHEL)
@@ -45,4 +51,5 @@
     name: nftables
     state: started
     enabled: true
+  become: yes
   when: ansible_facts['os_family'] == 'RedHat'
