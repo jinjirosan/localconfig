@@ -713,7 +713,7 @@ echo "Active Outbound Connections:"
 if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
     ss -tnp 2>/dev/null | awk 'NR==1 || ($1=="ESTAB" && $5 !~ /:22$/)' | head -10 || true
 elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
-    netstat -an 2>/dev/null | awk '/ESTABLISHED/ && $5 !~ /\.22$/' | head -10 || true
+    sudo netstat -an 2>/dev/null | awk '/ESTABLISHED/ && $5 !~ /\.22$/' | head -10 || true
 else
     if command -v ss >/dev/null 2>&1; then
         ss -tnp 2>/dev/null | awk 'NR==1 || ($1=="ESTAB" && $5 !~ /:22$/)' | head -10 || true
