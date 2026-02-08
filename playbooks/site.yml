@@ -122,7 +122,8 @@
       when: ansible_connection != 'local'
 
     - name: Get ansible user home directory
-      ansible.builtin.shell: getent passwd "{{ ansible_user }}" | cut -d: -f6
+      ansible.builtin.shell: |
+        getent passwd "{{ ansible_user }}" | cut -d: -f6
       register: ansible_user_home_cmd
       changed_when: false
       when: ansible_connection != 'local'
