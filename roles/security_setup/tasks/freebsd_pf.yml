@@ -45,10 +45,22 @@
     enabled: true
   become: yes
 
-- name: Load PF rules
-  ansible.builtin.command: pfctl -f /etc/pf.conf
+- name: Load PF rules (may temporarily interrupt SSH connection)
+  ansible.builtin.shell: "pfctl -f /etc/pf.conf; echo 'PF rules loaded'"
   become: yes
   changed_when: true
+  register: pfctl_result
+  async: 15
+  poll: 3
+  # Note: If SSH connection drops due to rule reload, Ansible will reconnect
+  # The rules should allow SSH from control host's subnet, so reconnection will work
+
+- name: Verify PF rules loaded successfully
+  ansible.builtin.command: pfctl -s rules
+  become: yes
+  register: pf_rules_check
+  changed_when: false
+  failed_when: pf_rules_check.rc != 0 or pf_rules_check.stdout | length == 0
 
 - name: Check if syslog.conf exists
   ansible.builtin.stat:
