@@ -32,7 +32,7 @@ Two items are not included in the git which need to be added:
 
 ### Main Playbook: `site.yml`
 
-The playbook orchestrates three main roles that set up your development environment:
+The playbook orchestrates several roles that set up your development environment:
 
 1. **ssh_setup**: 
    - Ensures SSH key pair exists on control machine
@@ -52,6 +52,21 @@ The playbook orchestrates three main roles that set up your development environm
    - Installs Badwolf color scheme and vim-airline plugin
    - Deploys all Vim autoload scripts and plugins
    - Configures system-wide Vim directories
+
+4. **login_setup**:
+   - Configures MOTD (Message of the Day) with system information
+   - Sets up SSH login banners
+   - OS-aware deployment (Debian/Ubuntu, RHEL, FreeBSD)
+
+5. **security_setup** (optional):
+   - Deploys stateful firewall with default-deny inbound/outbound filtering
+   - **Linux (Debian/Ubuntu, RHEL)**: nftables firewall
+   - **FreeBSD**: PF firewall
+   - Allows SSH only from configurable subnets
+   - Allows DNS/DHCP and selected outbound (HTTP/HTTPS, SSH)
+   - Logs outbound drops for visibility
+   - Configures log limits (500MB, 14-day retention)
+   - Only runs when enabled via interactive prompts in setup scripts
 
 #### Features:
 1. **Dynamic Role Execution:**
@@ -168,12 +183,22 @@ sudo ./setup_client.sh
 ./setup_remote.sh 172.16.234.54 ansible
 ```
 
-**Interactive User Selection:**
-When you run the script, you'll be prompted to select which user(s) to configure:
+**Interactive Configuration:**
+When you run the script, you'll be prompted for:
 
-1. **Ansible user and root only (default)** - Configures the `ansible` user and `root`
-2. **Specific user** - Prompts for a username and configures that user (e.g., `rayf`)
-3. **All users** - Configures all users on the system with home directories in `/home/`
+1. **User Selection**: Which user(s) to configure:
+   - **Ansible user and root only (default)** - Configures the `ansible` user and `root`
+   - **Specific user** - Prompts for a username and configures that user (e.g., `rayf`)
+   - **All users** - Configures all users on the system with home directories in `/home/`
+
+2. **Additional Sudo Users**: Optional additional users to add to passwordless sudo
+
+3. **MOTD Replacement**: Preview and optionally replace the existing MOTD
+
+4. **Firewall Configuration** (optional):
+   - Enable firewall (security_setup role)?
+   - SSH allowed source ranges (CIDR subnets)
+   - DNS servers for outbound allow list
 
 **Complete Workflow Example:**
 ```bash
@@ -227,9 +252,17 @@ localconfig/
 │   ├── tools_setup/
 │   │   └── tasks/
 │   │     └── main.yml
-│   └── vim__setup/
+│   ├── vim_config/
 │   │   └── tasks/
 │   │     └── main.yml
+│   ├── login_setup/
+│   │   ├── tasks/
+│   │   ├── templates/
+│   │   └── handlers/
+│   ├── security_setup/
+│   │   ├── tasks/
+│   │   ├── templates/
+│   │   └── defaults/
 │   └── ... (other roles)
 │
 ├── files/

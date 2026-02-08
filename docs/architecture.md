@@ -2,7 +2,7 @@
 
 ## Overview
 
-Localconfig is an Ansible-based configuration management system that automates the deployment of a personalized development environment across local and remote systems. It supports both Debian/Ubuntu and RHEL/CentOS distributions, automatically detecting the OS and using the appropriate package manager.
+Localconfig is an Ansible-based configuration management system that automates the deployment of a personalized development environment across local and remote systems. It supports Debian/Ubuntu, RHEL/CentOS, and FreeBSD distributions, automatically detecting the OS and using the appropriate package manager and tools.
 
 ## System Architecture
 
@@ -16,6 +16,8 @@ Localconfig is an Ansible-based configuration management system that automates t
 │  │ setup_local  │  │   site.yml   │  │ ssh_setup    │         │
 │  │ setup_remote │  │              │  │ tools_setup   │         │
 │  │ setup_client │  │              │  │ vim_config    │         │
+│  │              │  │              │  │ login_setup   │         │
+│  │              │  │              │  │ security_setup│         │
 │  └──────────────┘  └──────────────┘  └──────────────┘         │
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
@@ -65,7 +67,7 @@ Three bash scripts handle different deployment scenarios:
 
 ### 3. Ansible Roles
 
-Three roles handle specific aspects of the configuration:
+Five roles handle specific aspects of the configuration:
 
 #### `ssh_setup`
 - Ensures SSH key pair exists on control machine
@@ -74,7 +76,7 @@ Three roles handle specific aspects of the configuration:
 - Backs up existing SSH keys to `discovered_ssh_keys/` directory
 
 #### `tools_setup`
-- Detects OS (Debian/Ubuntu vs RHEL) and selects package manager
+- Detects OS (Debian/Ubuntu vs RHEL vs FreeBSD) and selects package manager
 - Installs essential development tools system-wide
 - Configures sudo access with NOPASSWD for ansible user
 - Verifies package installation
@@ -84,6 +86,22 @@ Three roles handle specific aspects of the configuration:
 - Deploys dotfiles (`.vimrc`, `.bashrc`, `.screenrc`, `.curlrc`) to user home directories
 - Installs Badwolf color scheme and vim-airline plugin
 - Deploys all Vim autoload scripts and plugins to system-wide directories
+
+#### `login_setup`
+- Configures MOTD (Message of the Day) with system information and ASCII art
+- Sets up SSH login banners
+- OS-aware deployment (Debian/Ubuntu uses `/etc/motd`, RHEL uses `/etc/issue`, FreeBSD uses `/etc/motd.template`)
+- Optional MOTD replacement (user can preview and choose to keep existing)
+
+#### `security_setup` (optional)
+- Deploys stateful firewall with default-deny inbound/outbound filtering
+- **Linux (Debian/Ubuntu, RHEL)**: nftables firewall (disables/masks firewalld on RHEL)
+- **FreeBSD**: PF firewall
+- Allows SSH only from configurable subnets (CIDR ranges)
+- Allows DNS/DHCP and selected outbound (HTTP/HTTPS, SSH)
+- Logs outbound drops with fixed prefixes for visibility
+- Configures log limits: 500MB total size, 14-day retention
+- Only runs when enabled via interactive prompts in setup scripts
 
 ## Data Flow
 
@@ -98,6 +116,8 @@ User runs setup_local.sh
     │   ├─► Option 1: Current user + root
     │   ├─► Option 2: Specific user(s) - space-separated
     │   └─► Option 3: All users
+    ├─► Additional sudo users selection
+    ├─► Firewall configuration prompts (optional)
     │
     └─► Executes playbooks/site.yml
         │
@@ -107,6 +127,8 @@ User runs setup_local.sh
         └─► Setup All Systems Play
             ├─► ssh_setup role
             ├─► tools_setup role
+            ├─► login_setup role
+            ├─► security_setup role (if enabled)
             └─► vim_config role
 ```
 
@@ -133,6 +155,9 @@ User runs setup_remote.sh <vm_ip>
     │   ├─► Option 1: Ansible user + root
     │   ├─► Option 2: Specific user(s) - space-separated
     │   └─► Option 3: All users
+    ├─► Additional sudo users selection
+    ├─► MOTD preview and replacement option
+    ├─► Firewall configuration prompts (optional)
     │
     └─► Executes playbooks/site.yml via SSH
         │
@@ -142,6 +167,8 @@ User runs setup_remote.sh <vm_ip>
         └─► Setup All Systems Play
             ├─► ssh_setup role
             ├─► tools_setup role
+            ├─► login_setup role
+            ├─► security_setup role (if enabled)
             └─► vim_config role
 ```
 
@@ -184,7 +211,9 @@ localconfig/
 ├── roles/                   # Ansible roles
 │   ├── ssh_setup/           # SSH configuration role
 │   ├── tools_setup/         # Tools installation role
-│   └── vim_config/          # Vim configuration role
+│   ├── vim_config/          # Vim configuration role
+│   ├── login_setup/         # MOTD and login banners role
+│   └── security_setup/      # Optional firewall role
 ├── ansible.cfg              # Ansible configuration
 ├── setup_local.sh           # Local deployment script
 ├── setup_remote.sh          # Remote deployment script
@@ -194,12 +223,14 @@ localconfig/
 
 ## Key Design Decisions
 
-1. **OS Detection**: Automatic detection of Debian/Ubuntu vs RHEL to use appropriate package managers
+1. **OS Detection**: Automatic detection of Debian/Ubuntu vs RHEL vs FreeBSD to use appropriate package managers and tools
 2. **Vim Version Detection**: Dynamic detection of Vim version to deploy to correct system directories
 3. **User Flexibility**: Support for single user, multiple users, or all users
 4. **Idempotency**: All tasks are idempotent - safe to run multiple times
 5. **SSH Key Backup**: Automatic backup of existing SSH keys before modification
 6. **Sudo Configuration**: Separate handling for single users vs "all users" to avoid adding invalid entries
+7. **Optional Security**: Firewall configuration is optional and interactive, allowing users to choose when to enable it
+8. **Log Visibility**: Firewall logs are integrated into login display (`.bashrc`) showing top blocked destinations
 
 ## Dependencies
 
@@ -207,6 +238,8 @@ localconfig/
 - **Python 3**: Required on target systems
 - **SSH**: For remote deployments
 - **Sudo**: Required for privilege escalation
+- **nftables** (Linux): Installed automatically by `security_setup` role when enabled
+- **PF** (FreeBSD): Built-in, configured by `security_setup` role when enabled
 
 ## Security Considerations
 
@@ -214,6 +247,10 @@ localconfig/
 2. **Sudo Access**: Configures NOPASSWD sudo for ansible user (required for automation)
 3. **SSH Key Backup**: Backs up existing SSH keys before modification
 4. **User Validation**: Validates user existence before configuration
+5. **Optional Firewall**: `security_setup` role provides stateful firewall with default-deny policies
+   - Restricts SSH access to configurable subnets
+   - Logs outbound connection attempts for visibility
+   - Configures log retention limits to prevent disk fill
 
 ## Extension Points
 

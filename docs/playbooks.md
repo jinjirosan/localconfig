@@ -212,6 +212,38 @@ Deploys the appropriate stateful firewall per OS with default-deny inbound and o
 - **`security_ssh_allowed_networks`**: CIDR list for SSH (default: `172.16.233.0/26 172.16.234.0/26`). Passed as space-separated string from setup scripts; role splits into a list.
 - **`security_dns_servers`**: DNS server IPs for outbound allow (default: `172.16.234.16 172.16.234.26`). Passed as space-separated string; role splits into a list.
 
+### Verifying Firewall Status
+
+**Linux (nftables):**
+```bash
+# Check service status
+systemctl status nftables
+
+# View active rules
+nft list ruleset
+
+# View rules with counters
+nft list ruleset -a
+
+# Check firewall logs (outbound drops)
+journalctl -k --since today | grep "nftables-drop-out"
+```
+
+**FreeBSD (PF):**
+```bash
+# Check PF status
+pfctl -s info
+
+# View active rules
+pfctl -s rules
+
+# Check firewall logs (outbound blocks)
+grep "pf-drop-out" /var/log/messages
+```
+
+**Login Display:**
+The deployed `.bashrc` automatically shows "Top Blocked Destinations (today)" at login, parsing firewall logs to display the most frequently blocked outbound connection attempts.
+
 ## Role: vim_config
 
 ### Purpose

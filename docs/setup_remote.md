@@ -72,6 +72,12 @@ Prompts for which users to configure:
 - **Option 2**: Specific user(s) - space-separated for multiple
 - **Option 3**: All users on the system
 
+### Step 2a: Additional Sudo Users
+
+Prompts for additional users to add to passwordless sudo (optional):
+- Enter space-separated usernames or press Enter to skip
+- These users get sudo access but not localconfig dotfiles (unless "all users" was selected)
+
 ### Step 3: Environment Validation
 
 ```bash
@@ -103,6 +109,24 @@ Creates or updates `hosts.ini` with remote host entry:
 ansible "$REMOTE_HOST" -i "$HOSTS_INI" -m ping -u "$ANSIBLE_USER"
 ```
 
+### Step 6a: MOTD Preview and Replacement
+
+After SSH connectivity is confirmed:
+- Displays current MOTD content from the remote host
+- Prompts whether to replace it with the new generated MOTD
+- User can choose to keep existing MOTD or replace it
+
+### Step 6b: Firewall Configuration (Optional)
+
+Prompts for firewall (security_setup role) configuration:
+1. **Enable firewall?** [y/N] - Choose whether to enable the firewall
+2. **SSH allowed source ranges** - If firewall enabled:
+   - Option 1: Use defaults (`172.16.233.0/26 172.16.234.0/26`)
+   - Option 2: Enter custom CIDR ranges (space-separated)
+3. **DNS servers** - If firewall enabled:
+   - Option 1: Use defaults (`172.16.234.16 172.16.234.26`)
+   - Option 2: Enter custom DNS server IPs (space-separated)
+
 ### Step 7: Playbook Execution
 
 Executes the Ansible playbook remotely:
@@ -112,7 +136,7 @@ ansible-playbook playbooks/site.yml \
     -i "$HOSTS_INI" \
     -l "$REMOTE_HOST" \
     -u "$ANSIBLE_USER" \
-    --extra-vars "target_user=$TARGET_USER"
+    --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS'"
 ```
 
 ## User Selection Options
@@ -179,9 +203,20 @@ When the script completes successfully, the following is configured on the remot
 - `git`, `cifs-utils`, `gnupg`, `curl`, `gcc`, `mlocate`
 
 ### Users Configured
-- **Sudoers**: `ansible_user` + `target_user(s)` (if not "all")
+- **Sudoers**: `ansible_user` + `target_user(s)` + `additional_sudo_users` (if not "all")
 - **Dotfiles**: `.vimrc`, `.bashrc`, `.screenrc`, `.curlrc`
 - **Vim Configuration**: Badwolf theme, airline plugin, autoload scripts
+
+### Login Configuration
+- **MOTD**: System information and ASCII art (if replacement was chosen)
+- **SSH Banner**: Login warning banner
+
+### Firewall Configuration (if enabled)
+- **Linux (Debian/Ubuntu, RHEL)**: nftables firewall with default-deny policies
+- **FreeBSD**: PF firewall with default-deny policies
+- **SSH Access**: Restricted to configured source subnets
+- **Outbound**: Allows DNS, DHCP, HTTP/HTTPS, SSH; logs all other attempts
+- **Log Limits**: 500MB total size, 14-day retention
 
 ### Files Created
 - `hosts.ini`: Updated with remote host entry
