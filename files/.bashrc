@@ -729,12 +729,16 @@ echo "Top Blocked Destinations (today):"
 if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
     sudo journalctl -k --since today 2>/dev/null | grep "nftables-drop-out" | grep -oP 'DST=\K[0-9.]+' | sort | uniq -c | sort -rn | head -5 2>/dev/null || echo "No drops today"
 elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
-    today_ts=$(date +"%b %e" 2>/dev/null | sed 's/  / /')
-    if [ -r /var/log/messages ]; then
-        # PF logs can have various formats, try multiple patterns
-        # Pattern 1: pf: ... block ... -> IP:port
-        # Pattern 2: block out ... -> IP
-        # Pattern 3: pf: ... -> IP
+    # Prefer pflog (binary): pflogd writes PF "block out log" to /var/log/pflog; parse with tcpdump.
+    if [ -e /var/log/pflog ] && command -v tcpdump >/dev/null 2>&1; then
+        today=$(date +%Y-%m-%d 2>/dev/null)
+        sudo tcpdump -n -tttt -r /var/log/pflog outbound and action block 2>/dev/null | \
+        grep "^${today}" | \
+        sed -n 's/.*> \([0-9][0-9.]*\)\.[0-9]*:.*/\1/p' | \
+        sort | uniq -c | sort -rn | head -5 2>/dev/null || echo "No drops today"
+    elif [ -r /var/log/messages ]; then
+        # Fallback: syslog (if PF was ever sent to local0)
+        today_ts=$(date +"%b %e" 2>/dev/null | sed 's/  / /')
         grep -F "$today_ts" /var/log/messages 2>/dev/null | \
         grep -iE "pf.*block.*out|block.*out.*log" | \
         sed -n -e 's/.*-> \([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\)\.[0-9]\{0,\}.*/\1/p' \

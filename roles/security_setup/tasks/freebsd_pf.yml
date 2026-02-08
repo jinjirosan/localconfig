@@ -62,6 +62,32 @@
   changed_when: false
   failed_when: pf_rules_check.rc != 0 or pf_rules_check.stdout | length == 0
 
+# pflogd reads PF log (e.g. "block out log") from pflog interface and writes to /var/log/pflog (binary).
+# .bashrc "Top Blocked Destinations" parses that file with tcpdump to show blocked outbound IPs.
+- name: Enable pflogd in rc.conf
+  ansible.builtin.lineinfile:
+    path: /etc/rc.conf
+    regexp: '^pflogd_enable='
+    line: 'pflogd_enable="YES"'
+    state: present
+  become: yes
+
+- name: Start and enable pflogd service
+  ansible.builtin.service:
+    name: pflogd
+    state: started
+    enabled: true
+  become: yes
+
+- name: Ensure newsyslog rotates /var/log/pflog (sends SIGHUP to pflogd)
+  ansible.builtin.lineinfile:
+    path: /etc/newsyslog.conf
+    regexp: '^/var/log/pflog\s'
+    line: '/var/log/pflog  root:wheel  644  7  *  @T00  GBJC  /var/run/pflogd.pid'
+    state: present
+  become: yes
+  ignore_errors: yes  # Format may vary across FreeBSD versions
+
 - name: Check if syslog.conf exists
   ansible.builtin.stat:
     path: /etc/syslog.conf
