@@ -20,6 +20,12 @@ TARGET_USER=""
 ADDITIONAL_SUDO_USERS=""
 REPLACE_MOTD="no"  # Default to no, will be set by preview_motd function
 PYTHON_INTERPRETER="/usr/bin/python3"  # Default, will be detected if SSH works
+# security_setup role defaults (must match roles/security_setup/defaults/main.yml)
+SECURITY_SSH_ALLOWED_DEFAULT="172.16.233.0/26 172.16.234.0/26"
+SECURITY_DNS_SERVERS_DEFAULT="172.16.234.16 172.16.234.26"
+SECURITY_SETUP_ENABLED="false"
+SECURITY_SSH_ALLOWED="$SECURITY_SSH_ALLOWED_DEFAULT"
+SECURITY_DNS_SERVERS="$SECURITY_DNS_SERVERS_DEFAULT"
 
 # Colors for output
 RED='\033[0;31m'
@@ -165,6 +171,78 @@ preview_motd() {
     esac
 }
 
+# Function to ask security_setup (firewall) options
+ask_security_setup() {
+    echo ""
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}Firewall (security_setup role)${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    read -p "Enable firewall (security_setup role)? [y/N]: " enable_fw
+    enable_fw=${enable_fw:-N}
+    case $enable_fw in
+        [Yy]*)
+            SECURITY_SETUP_ENABLED="true"
+            echo -e "${GREEN}Firewall will be configured${NC}"
+            ;;
+        *)
+            SECURITY_SETUP_ENABLED="false"
+            SECURITY_SSH_ALLOWED="$SECURITY_SSH_ALLOWED_DEFAULT"
+            SECURITY_DNS_SERVERS="$SECURITY_DNS_SERVERS_DEFAULT"
+            echo -e "${YELLOW}Firewall will be skipped${NC}"
+            return
+            ;;
+    esac
+
+    echo ""
+    echo "SSH allowed source ranges (CIDR). These subnets can connect to SSH on the target."
+    echo "  Default: $SECURITY_SSH_ALLOWED_DEFAULT"
+    echo "  1) Use defaults (recommended)"
+    echo "  2) Enter custom ranges (space-separated, e.g. 172.16.233.0/26 10.0.0.0/24)"
+    echo ""
+    read -p "Enter your choice [1-2] (default: 1): " ssh_choice
+    ssh_choice=${ssh_choice:-1}
+    case $ssh_choice in
+        2)
+            read -p "Enter CIDR ranges (space-separated): " SECURITY_SSH_ALLOWED
+            if [ -z "$SECURITY_SSH_ALLOWED" ]; then
+                echo -e "${YELLOW}Empty input, using defaults${NC}"
+                SECURITY_SSH_ALLOWED="$SECURITY_SSH_ALLOWED_DEFAULT"
+            else
+                echo -e "${GREEN}Using custom SSH ranges: $SECURITY_SSH_ALLOWED${NC}"
+            fi
+            ;;
+        *)
+            SECURITY_SSH_ALLOWED="$SECURITY_SSH_ALLOWED_DEFAULT"
+            echo -e "${GREEN}Using default SSH ranges${NC}"
+            ;;
+    esac
+
+    echo ""
+    echo "DNS servers for firewall outbound allow list."
+    echo "  Current defaults: $SECURITY_DNS_SERVERS_DEFAULT"
+    echo "  1) Use defaults"
+    echo "  2) Enter custom DNS server IPs (space-separated)"
+    echo ""
+    read -p "Enter your choice [1-2] (default: 1): " dns_choice
+    dns_choice=${dns_choice:-1}
+    case $dns_choice in
+        2)
+            read -p "Enter DNS server IPs (space-separated): " SECURITY_DNS_SERVERS
+            if [ -z "$SECURITY_DNS_SERVERS" ]; then
+                echo -e "${YELLOW}Empty input, using defaults${NC}"
+                SECURITY_DNS_SERVERS="$SECURITY_DNS_SERVERS_DEFAULT"
+            else
+                echo -e "${GREEN}Using custom DNS servers: $SECURITY_DNS_SERVERS${NC}"
+            fi
+            ;;
+        *)
+            SECURITY_DNS_SERVERS="$SECURITY_DNS_SERVERS_DEFAULT"
+            echo -e "${GREEN}Using default DNS servers${NC}"
+            ;;
+    esac
+}
+
 # Select target user interactively
 select_target_user
 
@@ -236,6 +314,9 @@ if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o PasswordAuthentication
     
     # Preview MOTD and ask for replacement (after SSH connectivity is confirmed)
     preview_motd
+
+    # Ask security_setup (firewall) options
+    ask_security_setup
 else
     echo -e "${RED}Error: Cannot connect to $REMOTE_HOST as $ANSIBLE_USER using SSH key authentication${NC}"
     echo ""
@@ -336,9 +417,9 @@ echo ""
 # Explicitly set the remote user to ensure it's used
 # Note: No --ask-become-pass needed since setup_client.sh configures NOPASSWD sudo for ansible user
 if [ "$TARGET_USER" = "all" ]; then
-    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=all replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS'"
+    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=all replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS'"
 else
-    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS'"
+    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS'"
 fi
 
 # Check result

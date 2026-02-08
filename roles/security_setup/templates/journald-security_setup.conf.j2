@@ -1,0 +1,6 @@
+# Ansible managed - security_setup role
+# Limit journal size and retention (all files 500MB max, 2 weeks retention)
+
+[Journal]
+SystemMaxUse={{ security_journald_max_use | default('500M') }}
+MaxAge={{ security_journald_max_age | default('14d') }}

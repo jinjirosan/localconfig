@@ -1,0 +1,31 @@
+---
+# security_setup role: deploy OS-appropriate firewall with inbound/outbound filtering
+# Only runs when security_setup_enabled is true (e.g. from setup_remote.sh / setup_local.sh)
+
+- name: Normalize security_ssh_allowed_networks to list
+  ansible.builtin.set_fact:
+    security_ssh_list: "{{ (security_ssh_allowed_networks is string) | ternary(security_ssh_allowed_networks.split(), security_ssh_allowed_networks) | default([]) }}"
+  when: security_setup_enabled | default(false) | bool
+
+- name: Normalize security_dns_servers to list
+  ansible.builtin.set_fact:
+    security_dns_list: "{{ (security_dns_servers is string) | ternary(security_dns_servers.split(), security_dns_servers) | default([]) }}"
+  when: security_setup_enabled | default(false) | bool
+
+- name: Include Linux nftables firewall tasks
+  ansible.builtin.include_tasks: linux_nftables.yml
+  when:
+    - security_setup_enabled | default(false) | bool
+    - ansible_facts['os_family'] in ['Debian', 'RedHat']  # Debian/Ubuntu and RHEL/CentOS
+
+- name: Include FreeBSD PF firewall tasks
+  ansible.builtin.include_tasks: freebsd_pf.yml
+  when:
+    - security_setup_enabled | default(false) | bool
+    - ansible_facts['os_family'] == 'FreeBSD'
+
+- name: Configure journald limits (Linux)
+  ansible.builtin.include_tasks: journald_limits.yml
+  when:
+    - security_setup_enabled | default(false) | bool
+    - ansible_facts['os_family'] in ['Debian', 'RedHat']

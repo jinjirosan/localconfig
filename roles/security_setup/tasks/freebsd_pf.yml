@@ -1,0 +1,41 @@
+---
+# FreeBSD: PF firewall with input/output filtering and logging
+# Log prefix for outbound drops: parse "block" in syslog; .bashrc extracts destination IP
+
+- name: Ensure PF is enabled in rc.conf
+  ansible.builtin.lineinfile:
+    path: /etc/rc.conf
+    regexp: '^pf_enable='
+    line: 'pf_enable="YES"'
+    state: present
+  become: yes
+
+- name: Set PF rules file in rc.conf
+  ansible.builtin.lineinfile:
+    path: /etc/rc.conf
+    regexp: '^pf_rules='
+    line: 'pf_rules="/etc/pf.conf"'
+    state: present
+  become: yes
+
+- name: Deploy PF rules file
+  ansible.builtin.template:
+    src: pf.conf.j2
+    dest: /etc/pf.conf
+    owner: root
+    group: wheel
+    mode: '0600'
+  become: yes
+
+- name: Load PF rules
+  ansible.builtin.command: pfctl -f /etc/pf.conf
+  become: yes
+  changed_when: true
+  failed_when: false  # may fail if PF not yet started
+
+- name: Enable PF if not already running
+  ansible.builtin.service:
+    name: pf
+    state: started
+    enabled: true
+  become: yes

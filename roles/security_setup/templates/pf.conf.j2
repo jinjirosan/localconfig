@@ -1,0 +1,23 @@
+# Ansible managed - security_setup role (FreeBSD PF)
+# Inbound: loopback, SSH from allowed subnets, DHCP response, established/related. Outbound: loopback, DNS, DHCP, HTTP/HTTPS/SSH, established; block and log rest.
+
+table <ssh_allowed> persist { {{ security_ssh_list | join(', ') }} }
+table <dns_servers> persist { {{ security_dns_list | join(', ') }} }
+
+set skip on lo
+
+# Inbound (first match wins; default block at end)
+pass in on lo
+pass in inet proto tcp from <ssh_allowed> to any port 22 flags S/SA
+pass in inet proto udp from any port 67 to any port 68
+pass in keep state (established)
+block in all
+
+# Outbound (first match wins; block out log for drops)
+pass out on lo
+pass out inet proto udp to <dns_servers> port 53 keep state
+pass out inet proto tcp to <dns_servers> port 53 keep state
+pass out inet proto udp from any port 68 to any port 67 keep state
+pass out inet proto tcp to any port { 80, 443, 22 } keep state
+pass out keep state (established)
+block out log

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Ansible playbook (`playbooks/site.yml`) orchestrates the deployment of localconfig through three specialized roles. This document describes the playbook structure, each role's responsibilities, and how they work together.
+The Ansible playbook (`playbooks/site.yml`) orchestrates the deployment of localconfig through several specialized roles, including optional firewall (security_setup) configuration. This document describes the playbook structure, each role's responsibilities, and how they work together.
 
 ## Main Playbook: `site.yml`
 
@@ -59,10 +59,15 @@ target_user: "all"
 1. `ssh_setup`
 2. `tools_setup`
 3. `vim_config`
+4. `login_setup`
+5. `security_setup` (only when `security_setup_enabled` is true, e.g. when you answer "yes" to "Enable firewall?" in setup_remote.sh or setup_local.sh)
 
 **Variables**:
 - `files_dir`: Path to `files/` directory containing dotfiles and Vim configs
 - `target_user`: Passed through from first play or defaults to `ansible_user`
+- `security_setup_enabled`: Set by setup_remote.sh / setup_local.sh when you enable the firewall
+- `security_ssh_allowed_networks`: Space-separated CIDR ranges for SSH (e.g. `172.16.233.0/26 172.16.234.0/26`)
+- `security_dns_servers`: Space-separated DNS server IPs for outbound allow list
 
 ## Role: ssh_setup
 
@@ -175,6 +180,37 @@ changed: [172.16.234.54] => (item=sudo)
 changed: [172.16.234.54] => (item=vim)
 ...
 ```
+
+## Role: login_setup
+
+Configures login banners, MOTD, and SSH banner. See role tasks and templates for details.
+
+## Role: security_setup (optional)
+
+### Purpose
+
+Deploys the appropriate stateful firewall per OS with default-deny inbound and outbound filtering, allows SSH only from configurable subnets, allows DNS/DHCP and selected outbound (HTTP/HTTPS, SSH), and logs outbound drops. Only runs when **Enable firewall (security_setup role)?** is answered with **yes** in `setup_remote.sh` or `setup_local.sh`.
+
+### When It Runs
+
+- **setup_remote.sh**: After MOTD preview, you are asked: (1) Enable firewall? (2) SSH allowed source ranges (option 1 = defaults, option 2 = custom CIDRs), (3) DNS servers (option 1 = defaults, option 2 = custom IPs).
+- **setup_local.sh**: After additional sudo users, the same three prompts are shown.
+- The role is executed only when `security_setup_enabled` is true (i.e. you chose to enable the firewall).
+
+### OS-Specific Behavior
+
+- **Debian / Ubuntu**: nftables; rules in `/etc/nftables.conf`; outbound drops logged with prefix `nftables-drop-out` (visible in `journalctl -k` and in the login "Top Blocked Destinations" block in `.bashrc`).
+- **RHEL / CentOS**: nftables; firewalld is disabled and masked; same rules and logging as Debian.
+- **FreeBSD**: PF; rules in `/etc/pf.conf`; outbound blocks logged to syslog (parsed in `.bashrc` for "Top Blocked Destinations").
+
+### Log Limits (Linux)
+
+- journald is configured via a drop-in under `/etc/systemd/journald.conf.d/` with `SystemMaxUse=500M` and `MaxAge=14d` (2 weeks).
+
+### Variables (from prompts or defaults)
+
+- **`security_ssh_allowed_networks`**: CIDR list for SSH (default: `172.16.233.0/26 172.16.234.0/26`). Passed as space-separated string from setup scripts; role splits into a list.
+- **`security_dns_servers`**: DNS server IPs for outbound allow (default: `172.16.234.16 172.16.234.26`). Passed as space-separated string; role splits into a list.
 
 ## Role: vim_config
 
@@ -306,6 +342,23 @@ changed: [172.16.234.54]
 - **Source**: `group_vars/all.yml`
 - **Usage**: Packages to install on RHEL
 
+**`security_setup_enabled`**:
+- **Type**: Boolean (string "true"/"false" from scripts)
+- **Source**: `--extra-vars` from setup_remote.sh or setup_local.sh
+- **Usage**: When true, the security_setup role runs and configures the firewall
+
+**`security_ssh_allowed_networks`**:
+- **Type**: String (space-separated CIDRs) or list
+- **Source**: Setup script prompts or role defaults
+- **Usage**: Subnets allowed to connect to SSH (e.g. `172.16.233.0/26 172.16.234.0/26`)
+
+**`security_dns_servers`**:
+- **Type**: String (space-separated IPs) or list
+- **Source**: Setup script prompts or role defaults
+- **Usage**: DNS servers allowed for outbound (e.g. `172.16.234.16 172.16.234.26`)
+
+**Login display (.bashrc)**: The deployed `.bashrc` shows at login (after listening ports): **Active Outbound Connections** (Linux: `ss`, FreeBSD: `netstat`, excluding SSH port 22) and **Top Blocked Destinations (today)** (from firewall logs: journalctl on Linux, syslog on FreeBSD).
+
 ## Execution Flow
 
 ```
@@ -329,6 +382,13 @@ playbooks/site.yml
         │   ├─► Install sudo
         │   ├─► Configure ansible_user sudo
         │   └─► Install packages
+        │
+        ├─► Role: login_setup
+        │   └─► MOTD, SSH banner, etc.
+        │
+        ├─► Role: security_setup (if security_setup_enabled)
+        │   ├─► Linux: nftables + journald limits
+        │   └─► FreeBSD: PF
         │
         └─► Role: vim_config
             ├─► Detect Vim version

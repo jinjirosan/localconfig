@@ -1,0 +1,17 @@
+---
+# security_setup role defaults
+# Override via extra-vars or group_vars (e.g. security_ssh_allowed_networks, security_dns_servers)
+
+# SSH allowed source networks (CIDR). Space-separated string or list from setup scripts.
+security_ssh_allowed_networks:
+  - 172.16.233.0/26
+  - 172.16.234.0/26
+
+# DNS servers allowed for outbound (IPv4). Space-separated string or list from setup scripts.
+security_dns_servers:
+  - 172.16.234.16
+  - 172.16.234.26
+
+# Log limits (used by journald drop-in on Linux)
+security_journald_max_use: "500M"
+security_journald_max_age: "14d"

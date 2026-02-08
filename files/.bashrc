@@ -707,3 +707,36 @@ else
 fi
 
 echo ""                         # for spacing
+
+# Active outbound connections (established, excluding SSH port 22 to reduce clutter)
+echo "Active Outbound Connections:"
+if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
+    ss -tnp 2>/dev/null | awk 'NR==1 || ($1=="ESTAB" && $5 !~ /:22$/)' | head -10 || true
+elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
+    netstat -an 2>/dev/null | awk '/ESTABLISHED/ && $5 !~ /\.22$/' | head -10 || true
+else
+    if command -v ss >/dev/null 2>&1; then
+        ss -tnp 2>/dev/null | awk 'NR==1 || ($1=="ESTAB" && $5 !~ /:22$/)' | head -10 || true
+    else
+        netstat -an 2>/dev/null | grep -i estab | head -10 || true
+    fi
+fi
+
+echo ""                         # for spacing
+
+# Top blocked destinations (today) - requires firewall that logs drops (e.g. security_setup role)
+echo "Top Blocked Destinations (today):"
+if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
+    sudo journalctl -k --since today 2>/dev/null | grep "nftables-drop-out" | grep -oP 'DST=\K[0-9.]+' | sort | uniq -c | sort -rn | head -5 2>/dev/null || echo "No drops today"
+elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
+    today_ts=$(date +"%b %e" 2>/dev/null | sed 's/  / /')
+    if [ -r /var/log/messages ]; then
+        grep -F "$today_ts" /var/log/messages 2>/dev/null | grep -E "pf:.*block.*out|block out" | sed -n 's/.*-> \([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\)\.[0-9]\{0,\}.*/\1/p' | sort | uniq -c | sort -rn | head -5 2>/dev/null || echo "No drops today"
+    else
+        echo "No drops today"
+    fi
+else
+    echo "No drops today"
+fi
+
+echo ""                         # for spacing

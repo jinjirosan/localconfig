@@ -71,6 +71,8 @@
     - tools_setup
     - vim_config
     - login_setup
+    - role: security_setup
+      when: security_setup_enabled | default(false) | bool
 
 - name: Installation Summary
   hosts: all
