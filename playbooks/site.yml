@@ -112,3 +112,51 @@
           
           ========================================
 
+- name: Disable ansible user (remote only, after install complete)
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Set sudoers path for disable step
+      ansible.builtin.set_fact:
+        sudoers_path: "{{ '/usr/local/etc/sudoers' if ansible_facts['os_family'] == 'FreeBSD' else '/etc/sudoers' }}"
+      when: ansible_connection != 'local'
+
+    - name: Get ansible user home directory
+      ansible.builtin.shell: getent passwd "{{ ansible_user }}" | cut -d: -f6
+      register: ansible_user_home_cmd
+      changed_when: false
+      when: ansible_connection != 'local'
+
+    - name: Remove ansible user from sudoers
+      ansible.builtin.lineinfile:
+        path: "{{ sudoers_path }}"
+        line: "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL"
+        state: absent
+      become: true
+      when: ansible_connection != 'local'
+
+    - name: Check if ansible user authorized_keys exists
+      ansible.builtin.stat:
+        path: "{{ ansible_user_home_cmd.stdout }}/.ssh/authorized_keys"
+      register: ansible_authorized_keys_stat
+      when:
+        - ansible_connection != 'local'
+        - ansible_user_home_cmd.stdout is defined
+        - ansible_user_home_cmd.stdout != ''
+
+    - name: Disable SSH key login for ansible user (move authorized_keys aside)
+      ansible.builtin.shell: |
+        mv "{{ ansible_user_home_cmd.stdout }}/.ssh/authorized_keys" "{{ ansible_user_home_cmd.stdout }}/.ssh/authorized_keys.disabled"
+      become: true
+      when:
+        - ansible_connection != 'local'
+        - ansible_user_home_cmd.stdout is defined
+        - ansible_user_home_cmd.stdout != ''
+        - ansible_authorized_keys_stat.stat is defined
+        - ansible_authorized_keys_stat.stat.exists | default(false)
+
+    - name: Display ansible user disabled message
+      ansible.builtin.debug:
+        msg: "Ansible user '{{ ansible_user }}' has been disabled (sudo removed, SSH keys moved). Run setup_client.sh on this host as root to re-enable for future Ansible runs."
+      when: ansible_connection != 'local'
+

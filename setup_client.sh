@@ -194,9 +194,15 @@ if ! command -v python3 > /dev/null; then
     exit 1
 fi
 
-# Create ansible user if it doesn't exist
+# Create ansible user if it doesn't exist, or re-enable if it was disabled
 if id "$ANSIBLE_USER" >/dev/null 2>&1; then
-    printf "%b\n" "${YELLOW}User '$ANSIBLE_USER' already exists${NC}"
+    printf "%b\n" "${YELLOW}User '$ANSIBLE_USER' already exists - re-enabling for Ansible${NC}"
+    # Unlock account in case it was locked (e.g. manually)
+    if [ "$PKG_MANAGER" = "pkg" ]; then
+        pw unlock "$ANSIBLE_USER" 2>/dev/null || true
+    else
+        usermod -U "$ANSIBLE_USER" 2>/dev/null || true
+    fi
 else
     printf "%b\n" "${YELLOW}Creating user '$ANSIBLE_USER'...${NC}"
     # Determine shell - prefer bash if available, otherwise use sh
@@ -237,6 +243,14 @@ printf "%b\n" "${YELLOW}Setting up SSH directory for '$ANSIBLE_USER'...${NC}"
 mkdir -p "$SSH_DIR"
 chmod 700 "$SSH_DIR"
 chown "$ANSIBLE_USER:$ANSIBLE_USER" "$SSH_DIR"
+
+# Restore authorized_keys from previous disable (setup_remote playbook moves it to .disabled)
+if [ -f "${AUTHORIZED_KEYS}.disabled" ]; then
+    mv "${AUTHORIZED_KEYS}.disabled" "$AUTHORIZED_KEYS"
+    chmod 600 "$AUTHORIZED_KEYS"
+    chown "$ANSIBLE_USER:$ANSIBLE_USER" "$AUTHORIZED_KEYS"
+    printf "%b\n" "${GREEN}Restored authorized_keys from previous disable${NC}"
+fi
 
 # Add control host's SSH public key
 printf "%b\n" "${YELLOW}Adding control host's SSH public key...${NC}"

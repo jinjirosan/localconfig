@@ -72,12 +72,33 @@
     state: present
   become: yes
 
-- name: Start and enable pflogd service
+- name: Check if pflogd rc.d script exists
+  ansible.builtin.stat:
+    path: /etc/rc.d/pflogd
+  register: pflogd_rc_script
+  become: yes
+
+- name: Start and enable pflogd service (when rc.d script present)
   ansible.builtin.service:
     name: pflogd
     state: started
     enabled: true
   become: yes
+  when: pflogd_rc_script.stat.exists and pflogd_rc_script.stat.executable
+
+- name: Check if pflogd is already running (when rc.d script missing)
+  ansible.builtin.shell: pgrep -x pflogd
+  register: pflogd_running
+  failed_when: false
+  changed_when: false
+  when: not (pflogd_rc_script.stat.exists | default(false) and pflogd_rc_script.stat.executable | default(false))
+
+- name: Start pflogd daemon when rc.d script is missing and not running
+  ansible.builtin.command: /usr/sbin/pflogd
+  become: yes
+  when:
+    - not (pflogd_rc_script.stat.exists | default(false) and pflogd_rc_script.stat.executable | default(false))
+    - (pflogd_running.rc | default(0)) != 0
 
 - name: Ensure newsyslog rotates /var/log/pflog (sends SIGHUP to pflogd)
   ansible.builtin.lineinfile:
