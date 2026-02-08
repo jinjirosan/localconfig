@@ -29,7 +29,7 @@ freebsd_packages:
   - gnupg
   - curl
   - gcc
-  - mlocate
+  - findutils  # Provides locate command (mlocate equivalent)
   - lsof
   - netcat
   - pv

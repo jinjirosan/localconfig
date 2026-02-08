@@ -731,7 +731,15 @@ if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
 elif [ -f /etc/freebsd-update.conf ] || uname -s | grep -q FreeBSD; then
     today_ts=$(date +"%b %e" 2>/dev/null | sed 's/  / /')
     if [ -r /var/log/messages ]; then
-        grep -F "$today_ts" /var/log/messages 2>/dev/null | grep -E "pf:.*block.*out|block out" | sed -n 's/.*-> \([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\)\.[0-9]\{0,\}.*/\1/p' | sort | uniq -c | sort -rn | head -5 2>/dev/null || echo "No drops today"
+        # PF logs can have various formats, try multiple patterns
+        # Pattern 1: pf: ... block ... -> IP:port
+        # Pattern 2: block out ... -> IP
+        # Pattern 3: pf: ... -> IP
+        grep -F "$today_ts" /var/log/messages 2>/dev/null | \
+        grep -iE "pf.*block.*out|block.*out.*log" | \
+        sed -n -e 's/.*-> \([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\)\.[0-9]\{0,\}.*/\1/p' \
+               -e 's/.* \([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\)\.[0-9]\{0,\}.*/\1/p' | \
+        sort | uniq -c | sort -rn | head -5 2>/dev/null || echo "No drops today"
     else
         echo "No drops today"
     fi

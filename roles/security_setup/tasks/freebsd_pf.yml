@@ -27,11 +27,16 @@
     mode: '0600'
   become: yes
 
-- name: Load PF rules
-  ansible.builtin.command: pfctl -f /etc/pf.conf
+- name: Test PF rules syntax
+  ansible.builtin.command: pfctl -nf /etc/pf.conf
   become: yes
-  changed_when: true
-  failed_when: false  # may fail if PF not yet started
+  register: pf_syntax_test
+  changed_when: false
+
+- name: Display PF syntax test result
+  ansible.builtin.debug:
+    msg: "{{ pf_syntax_test.stderr_lines | default([]) }}"
+  when: pf_syntax_test.stderr_lines | default([]) | length > 0
 
 - name: Enable PF if not already running
   ansible.builtin.service:
@@ -39,3 +44,29 @@
     state: started
     enabled: true
   become: yes
+
+- name: Load PF rules
+  ansible.builtin.command: pfctl -f /etc/pf.conf
+  become: yes
+  changed_when: true
+
+- name: Check if syslog.conf exists
+  ansible.builtin.stat:
+    path: /etc/syslog.conf
+  register: syslog_conf
+
+- name: Ensure PF logs go to /var/log/messages (if syslog.conf exists)
+  ansible.builtin.lineinfile:
+    path: /etc/syslog.conf
+    regexp: '^local0\.\*'
+    line: 'local0.*		/var/log/messages'
+    state: present
+  become: yes
+  when: syslog_conf.stat.exists
+  ignore_errors: yes  # May already be configured or use different format
+
+- name: Reload syslogd if syslog.conf was modified
+  ansible.builtin.command: killall -HUP syslogd
+  become: yes
+  when: syslog_conf.stat.exists
+  ignore_errors: yes  # May fail if syslogd not running or no permission

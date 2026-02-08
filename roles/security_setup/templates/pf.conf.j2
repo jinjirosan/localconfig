@@ -7,17 +7,17 @@ table <dns_servers> persist { {{ security_dns_list | join(', ') }} }
 set skip on lo
 
 # Inbound (first match wins; default block at end)
-pass in on lo
-pass in inet proto tcp from <ssh_allowed> to any port 22 flags S/SA
-pass in inet proto udp from any port 67 to any port 68
-pass in keep state (established)
+pass in quick on lo
+pass in quick inet proto tcp from <ssh_allowed> to any port 22 flags S/SA keep state
+pass in quick inet proto udp from any port 67 to any port 68 keep state
+# Established connections are automatically allowed by keep state above
 block in all
 
 # Outbound (first match wins; block out log for drops)
-pass out on lo
-pass out inet proto udp to <dns_servers> port 53 keep state
-pass out inet proto tcp to <dns_servers> port 53 keep state
-pass out inet proto udp from any port 68 to any port 67 keep state
-pass out inet proto tcp to any port { 80, 443, 22 } keep state
-pass out keep state (established)
+pass out quick on lo
+pass out quick inet proto udp to <dns_servers> port 53 keep state
+pass out quick inet proto tcp to <dns_servers> port 53 keep state
+pass out quick inet proto udp from any port 68 to any port 67 keep state
+pass out quick inet proto tcp to any port { 80, 443, 22 } keep state
+# Established connections are automatically allowed by keep state above
 block out log
