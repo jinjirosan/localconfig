@@ -344,33 +344,9 @@
     state: directory
   become: yes
 
-- name: Copy autoload files for Vim using find and copy
-  ansible.builtin.find:
-    paths: "{{ files_dir }}/autoload"
-    recurse: yes
-    file_type: file
-  register: autoload_files
-  delegate_to: localhost
-  run_once: true
-
-- name: Extract directory paths for autoload subdirectories
-  ansible.builtin.set_fact:
-    autoload_dirs: "{{ autoload_dirs | default([]) + [(vim_base_dir + '/vim' + vim_version + '/autoload/' + (item.path | regex_replace('^.*/autoload/', '') | dirname))] }}"
-  loop: "{{ autoload_files.files }}"
-  when: (item.path | regex_replace('^.*/autoload/', '') | dirname) != '.'
-
-- name: Create autoload subdirectories
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    mode: '0755'
-  loop: "{{ autoload_dirs | unique }}"
-  become: yes
-
-- name: Copy each autoload file to remote host
+- name: Copy autoload tree to Vim autoload directory
   ansible.builtin.copy:
-    src: "{{ item.path }}"
-    dest: "{{ vim_base_dir }}/vim{{ vim_version }}/autoload/{{ item.path | regex_replace('^.*/autoload/', '') }}"
+    src: "{{ files_dir }}/autoload/"
+    dest: "{{ vim_base_dir }}/vim{{ vim_version }}/autoload/"
     mode: preserve
-  loop: "{{ autoload_files.files }}"
   become: yes
