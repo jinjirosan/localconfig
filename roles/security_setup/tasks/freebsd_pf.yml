@@ -64,6 +64,8 @@
 
 # pflogd reads PF log (e.g. "block out log") from pflog interface and writes to /var/log/pflog (binary).
 # .bashrc "Top Blocked Destinations" parses that file with tcpdump to show blocked outbound IPs.
+# On minimal/jail/custom FreeBSD, pflogd may be missing (no rc.d script, no binary). We never fail;
+# we only start pflogd when we have a way to run it.
 - name: Enable pflogd in rc.conf
   ansible.builtin.lineinfile:
     path: /etc/rc.conf
@@ -77,6 +79,13 @@
     path: /etc/rc.d/pflogd
   register: pflogd_rc_script
   become: yes
+
+- name: Get pflogd binary path (when rc.d script missing)
+  ansible.builtin.command: which pflogd
+  register: pflogd_bin
+  failed_when: false
+  changed_when: false
+  when: not (pflogd_rc_script.stat.exists | default(false) and pflogd_rc_script.stat.executable | default(false))
 
 - name: Start and enable pflogd service (when rc.d script present)
   ansible.builtin.service:
@@ -93,12 +102,22 @@
   changed_when: false
   when: not (pflogd_rc_script.stat.exists | default(false) and pflogd_rc_script.stat.executable | default(false))
 
-- name: Start pflogd daemon when rc.d script is missing and not running
-  ansible.builtin.command: /usr/sbin/pflogd
+- name: Start pflogd daemon when rc.d script missing, binary found, and not running
+  ansible.builtin.command: "{{ pflogd_bin.stdout | trim }}"
   become: yes
   when:
     - not (pflogd_rc_script.stat.exists | default(false) and pflogd_rc_script.stat.executable | default(false))
     - (pflogd_running.rc | default(0)) != 0
+    - pflogd_bin.stdout is defined
+    - (pflogd_bin.stdout | trim | length) > 0
+
+- name: Note when pflogd is unavailable (no rc.d script, no binary)
+  ansible.builtin.debug:
+    msg: "pflogd not found on this system (no /etc/rc.d/pflogd, no pflogd in PATH). PF is running but /var/log/pflog will not be created; 'Top Blocked Destinations' in .bashrc will show no data. Install base pflogd or add it to PATH if needed."
+  when:
+    - not (pflogd_rc_script.stat.exists | default(false) and pflogd_rc_script.stat.executable | default(false))
+    - pflogd_bin is defined
+    - (pflogd_bin.stdout | default('') | trim | length) == 0
 
 - name: Ensure newsyslog rotates /var/log/pflog (sends SIGHUP to pflogd)
   ansible.builtin.lineinfile:
