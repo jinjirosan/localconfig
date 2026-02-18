@@ -53,45 +53,13 @@
     - current_desktop == "none"
     - not desktop_apps_enabled
 
-# Ask about each application interactively
-- name: Ask about Brave Browser installation
-  ansible.builtin.pause:
-    prompt: "Install Brave Browser? [y/N]"
-  register: brave_prompt
-  when: desktop_apps_enabled | default(false)
-
-- name: Set Brave Browser install flag
+# Set application install flags from variables (passed from setup scripts)
+- name: Set application install flags
   ansible.builtin.set_fact:
-    install_brave: "{{ 'y' in brave_prompt.user_input | lower or 'yes' in brave_prompt.user_input | lower }}"
-  when: 
-    - desktop_apps_enabled | default(false)
-    - brave_prompt is defined
-
-- name: Ask about LibreOffice installation
-  ansible.builtin.pause:
-    prompt: "Install LibreOffice? [y/N]"
-  register: libreoffice_prompt
+    install_brave: "{{ desktop_apps_brave | default(false) | bool }}"
+    install_libreoffice: "{{ desktop_apps_libreoffice | default(false) | bool }}"
+    install_vlc: "{{ desktop_apps_vlc | default(false) | bool }}"
   when: desktop_apps_enabled | default(false)
-
-- name: Set LibreOffice install flag
-  ansible.builtin.set_fact:
-    install_libreoffice: "{{ 'y' in libreoffice_prompt.user_input | lower or 'yes' in libreoffice_prompt.user_input | lower }}"
-  when: 
-    - desktop_apps_enabled | default(false)
-    - libreoffice_prompt is defined
-
-- name: Ask about VLC installation
-  ansible.builtin.pause:
-    prompt: "Install VLC media player? [y/N]"
-  register: vlc_prompt
-  when: desktop_apps_enabled | default(false)
-
-- name: Set VLC install flag
-  ansible.builtin.set_fact:
-    install_vlc: "{{ 'y' in vlc_prompt.user_input | lower or 'yes' in vlc_prompt.user_input | lower }}"
-  when: 
-    - desktop_apps_enabled | default(false)
-    - vlc_prompt is defined
 
 # Install applications (Debian/Ubuntu)
 - name: Install desktop apps (Debian/Ubuntu)

@@ -19,6 +19,9 @@ SECURITY_SETUP_ENABLED="false"
 SECURITY_SSH_ALLOWED="$SECURITY_SSH_ALLOWED_DEFAULT"
 SECURITY_DNS_SERVERS="$SECURITY_DNS_SERVERS_DEFAULT"
 DESKTOP_APPS_ENABLED="false"
+DESKTOP_APPS_BRAVE="false"
+DESKTOP_APPS_LIBREOFFICE="false"
+DESKTOP_APPS_VLC="false"
 
 # Colors for output
 RED='\033[0;31m'
@@ -195,10 +198,53 @@ ask_desktop_apps_setup() {
         [Yy]*)
             DESKTOP_APPS_ENABLED="true"
             echo -e "${GREEN}Desktop applications setup will be configured${NC}"
-            echo -e "${YELLOW}You will be prompted for each application during playbook execution${NC}"
+            echo ""
+            
+            # Ask about each application
+            read -p "Install Brave Browser? [y/N]: " install_brave
+            install_brave=${install_brave:-N}
+            case $install_brave in
+                [Yy]*)
+                    DESKTOP_APPS_BRAVE="true"
+                    echo -e "${GREEN}Brave Browser will be installed${NC}"
+                    ;;
+                *)
+                    DESKTOP_APPS_BRAVE="false"
+                    echo -e "${YELLOW}Brave Browser will be skipped${NC}"
+                    ;;
+            esac
+            
+            read -p "Install LibreOffice? [y/N]: " install_libreoffice
+            install_libreoffice=${install_libreoffice:-N}
+            case $install_libreoffice in
+                [Yy]*)
+                    DESKTOP_APPS_LIBREOFFICE="true"
+                    echo -e "${GREEN}LibreOffice will be installed${NC}"
+                    ;;
+                *)
+                    DESKTOP_APPS_LIBREOFFICE="false"
+                    echo -e "${YELLOW}LibreOffice will be skipped${NC}"
+                    ;;
+            esac
+            
+            read -p "Install VLC media player? [y/N]: " install_vlc
+            install_vlc=${install_vlc:-N}
+            case $install_vlc in
+                [Yy]*)
+                    DESKTOP_APPS_VLC="true"
+                    echo -e "${GREEN}VLC will be installed${NC}"
+                    ;;
+                *)
+                    DESKTOP_APPS_VLC="false"
+                    echo -e "${YELLOW}VLC will be skipped${NC}"
+                    ;;
+            esac
             ;;
         *)
             DESKTOP_APPS_ENABLED="false"
+            DESKTOP_APPS_BRAVE="false"
+            DESKTOP_APPS_LIBREOFFICE="false"
+            DESKTOP_APPS_VLC="false"
             echo -e "${YELLOW}Desktop applications setup will be skipped${NC}"
             ;;
     esac
@@ -299,9 +345,9 @@ echo ""
 
 # Always pass target_user explicitly (ansible_user comes from hosts.ini)
 if [ "$TARGET_USER" = "all" ]; then
-    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=all replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS' desktop_apps_enabled=$DESKTOP_APPS_ENABLED" $NEED_BECOME_PASS
+    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=all replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS' desktop_apps_enabled=$DESKTOP_APPS_ENABLED desktop_apps_brave=$DESKTOP_APPS_BRAVE desktop_apps_libreoffice=$DESKTOP_APPS_LIBREOFFICE desktop_apps_vlc=$DESKTOP_APPS_VLC" $NEED_BECOME_PASS
 else
-    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS' desktop_apps_enabled=$DESKTOP_APPS_ENABLED" $NEED_BECOME_PASS
+    ansible-playbook playbooks/site.yml -i hosts.ini -l local --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS' desktop_apps_enabled=$DESKTOP_APPS_ENABLED desktop_apps_brave=$DESKTOP_APPS_BRAVE desktop_apps_libreoffice=$DESKTOP_APPS_LIBREOFFICE desktop_apps_vlc=$DESKTOP_APPS_VLC" $NEED_BECOME_PASS
 fi
 
 # Check result
