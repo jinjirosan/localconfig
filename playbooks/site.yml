@@ -128,36 +128,36 @@
       changed_when: false
       when: ansible_connection != 'local'
 
-    - name: Check if ansible user authorized_keys exists
-      ansible.builtin.stat:
-        path: "{{ ansible_user_home_cmd.stdout }}/.ssh/authorized_keys"
-      register: ansible_authorized_keys_stat
-      when:
-        - ansible_connection != 'local'
-        - ansible_user_home_cmd.stdout is defined
-        - ansible_user_home_cmd.stdout != ''
-
-    - name: Disable SSH key login for ansible user (move authorized_keys aside)
+    - name: Schedule delayed disable of ansible user (SSH key + sudo)
       ansible.builtin.shell: |
-        mv "{{ ansible_user_home_cmd.stdout }}/.ssh/authorized_keys" "{{ ansible_user_home_cmd.stdout }}/.ssh/authorized_keys.disabled"
+        set -eu
+        ANSIBLE_USER="{{ ansible_user }}"
+        SUDOERS_FILE="{{ sudoers_path }}"
+        ANSIBLE_HOME="{{ ansible_user_home_cmd.stdout | default('') }}"
+
+        (
+          # Small delay to ensure Ansible play finishes cleanly before we revoke access
+          sleep 30
+
+          # Disable SSH key login for ansible user
+          if [ -n "$ANSIBLE_HOME" ] && [ -f "$ANSIBLE_HOME/.ssh/authorized_keys" ]; then
+            mv "$ANSIBLE_HOME/.ssh/authorized_keys" "$ANSIBLE_HOME/.ssh/authorized_keys.disabled" 2>/dev/null || true
+          fi
+
+          # Remove ansible user from sudoers (portable sed -i syntax)
+          if [ -n "$ANSIBLE_USER" ] && [ -f "$SUDOERS_FILE" ]; then
+            # FreeBSD/BSD sed: -i.bak, GNU sed also accepts this form
+            sed -i.bak "/^${ANSIBLE_USER} ALL=(ALL:ALL) NOPASSWD:ALL$/d" "$SUDOERS_FILE" 2>/dev/null || true
+          fi
+        ) >/var/log/ansible_disable_ansible_user.log 2>&1 &
       become: true
       when:
         - ansible_connection != 'local'
         - ansible_user_home_cmd.stdout is defined
         - ansible_user_home_cmd.stdout != ''
-        - ansible_authorized_keys_stat.stat is defined
-        - ansible_authorized_keys_stat.stat.exists | default(false)
 
-    - name: Remove ansible user from sudoers
-      ansible.builtin.lineinfile:
-        path: "{{ sudoers_path }}"
-        line: "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL"
-        state: absent
-      become: true
-      when: ansible_connection != 'local'
-
-    - name: Display ansible user disabled message
+    - name: Display ansible user disable scheduled message
       ansible.builtin.debug:
-        msg: "Ansible user '{{ ansible_user }}' has been disabled (sudo removed, SSH keys moved). Run setup_client.sh on this host as root to re-enable for future Ansible runs."
+        msg: "Ansible user '{{ ansible_user }}' disable has been scheduled (SSH keys and sudo will be revoked shortly after play completion). Run setup_client.sh on this host as root to re-enable for future Ansible runs."
       when: ansible_connection != 'local'
 
