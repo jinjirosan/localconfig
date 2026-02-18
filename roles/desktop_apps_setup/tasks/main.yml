@@ -1,0 +1,261 @@
+---
+# Desktop Apps Setup Role
+
+# Detect desktop environment
+- name: Detect desktop environment
+  ansible.builtin.shell: |
+    if [ -n "$XDG_CURRENT_DESKTOP" ]; then
+      echo "$XDG_CURRENT_DESKTOP" | tr '[:upper:]' '[:lower:]'
+    elif [ -n "$DESKTOP_SESSION" ]; then
+      echo "$DESKTOP_SESSION" | tr '[:upper:]' '[:lower:]'
+    elif pgrep -x "mate-session" > /dev/null 2>&1; then
+      echo "mate"
+    elif pgrep -x "gnome-session" > /dev/null 2>&1; then
+      echo "gnome"
+    elif pgrep -x "xfce4-session" > /dev/null 2>&1; then
+      echo "xfce"
+    elif pgrep -x "startkde" > /dev/null 2>&1; then
+      echo "kde"
+    else
+      echo "none"
+    fi
+  register: detected_desktop
+  changed_when: false
+  failed_when: false
+  when: desktop_environment == "auto"
+
+- name: Set desktop environment fact
+  ansible.builtin.set_fact:
+    current_desktop: "{{ desktop_environment if desktop_environment != 'auto' else detected_desktop.stdout }}"
+
+- name: Check if X11/desktop is available
+  ansible.builtin.stat:
+    path: /usr/bin/X
+  register: x11_available
+  failed_when: false
+
+- name: Check if Wayland is available
+  ansible.builtin.stat:
+    path: /usr/bin/wayland
+  register: wayland_available
+  failed_when: false
+
+- name: Set desktop available fact
+  ansible.builtin.set_fact:
+    desktop_available: "{{ x11_available.stat.exists | default(false) or wayland_available.stat.exists | default(false) }}"
+
+# Only proceed if desktop is available or explicitly enabled
+- name: Skip desktop apps if no desktop environment detected
+  ansible.builtin.debug:
+    msg: "Skipping desktop apps installation: No desktop environment detected. Set desktop_apps_enabled: true to force installation."
+  when:
+    - not desktop_available
+    - current_desktop == "none"
+    - not desktop_apps_enabled
+
+# Ask about each application interactively
+- name: Ask about Brave Browser installation
+  ansible.builtin.pause:
+    prompt: "Install Brave Browser? [y/N]"
+  register: brave_prompt
+  when: desktop_apps_enabled | default(false)
+
+- name: Set Brave Browser install flag
+  ansible.builtin.set_fact:
+    install_brave: "{{ 'y' in brave_prompt.user_input | lower or 'yes' in brave_prompt.user_input | lower }}"
+  when: 
+    - desktop_apps_enabled | default(false)
+    - brave_prompt is defined
+
+- name: Ask about LibreOffice installation
+  ansible.builtin.pause:
+    prompt: "Install LibreOffice? [y/N]"
+  register: libreoffice_prompt
+  when: desktop_apps_enabled | default(false)
+
+- name: Set LibreOffice install flag
+  ansible.builtin.set_fact:
+    install_libreoffice: "{{ 'y' in libreoffice_prompt.user_input | lower or 'yes' in libreoffice_prompt.user_input | lower }}"
+  when: 
+    - desktop_apps_enabled | default(false)
+    - libreoffice_prompt is defined
+
+- name: Ask about VLC installation
+  ansible.builtin.pause:
+    prompt: "Install VLC media player? [y/N]"
+  register: vlc_prompt
+  when: desktop_apps_enabled | default(false)
+
+- name: Set VLC install flag
+  ansible.builtin.set_fact:
+    install_vlc: "{{ 'y' in vlc_prompt.user_input | lower or 'yes' in vlc_prompt.user_input | lower }}"
+  when: 
+    - desktop_apps_enabled | default(false)
+    - vlc_prompt is defined
+
+# Install applications (Debian/Ubuntu)
+- name: Install desktop apps (Debian/Ubuntu)
+  block:
+    # Brave Browser setup (Debian/Ubuntu)
+    - name: Install prerequisites for Brave Browser (Debian/Ubuntu)
+      ansible.builtin.package:
+        name:
+          - apt-transport-https
+          - curl
+          - gnupg
+        state: present
+      become: yes
+      when: install_brave | default(false)
+
+    - name: Add Brave Browser GPG key (Debian/Ubuntu)
+      ansible.builtin.apt_key:
+        url: https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+        state: present
+        keyring: /usr/share/keyrings/brave-browser-archive-keyring.gpg
+      become: yes
+      when: install_brave | default(false)
+
+    - name: Add Brave Browser repository (Debian/Ubuntu)
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main"
+        state: present
+        update_cache: yes
+        filename: brave-browser-release
+      become: yes
+      when: install_brave | default(false)
+
+    - name: Install Brave Browser (Debian/Ubuntu)
+      ansible.builtin.package:
+        name: brave-browser
+        state: present
+        update_cache: yes
+      become: yes
+      when: install_brave | default(false)
+      ignore_errors: yes
+
+    # LibreOffice setup (Debian/Ubuntu)
+    - name: Install LibreOffice (Debian/Ubuntu)
+      ansible.builtin.package:
+        name: libreoffice
+        state: present
+      become: yes
+      when: install_libreoffice | default(false)
+      ignore_errors: yes
+
+    # VLC setup (Debian/Ubuntu)
+    - name: Install VLC (Debian/Ubuntu)
+      ansible.builtin.package:
+        name: vlc
+        state: present
+      become: yes
+      when: install_vlc | default(false)
+      ignore_errors: yes
+
+  when:
+    - ansible_facts['os_family'] == "Debian"
+    - (desktop_available or desktop_apps_enabled)
+
+# Install applications (RHEL/CentOS)
+- name: Install desktop apps (RHEL/CentOS)
+  block:
+    # Brave Browser setup (RHEL/CentOS)
+    - name: Install prerequisites for Brave Browser (RHEL/CentOS)
+      ansible.builtin.package:
+        name:
+          - dnf-plugins-core
+          - curl
+        state: present
+      become: yes
+      when: install_brave | default(false)
+
+    - name: Add Brave Browser repository (RHEL/CentOS)
+      ansible.builtin.yum_repository:
+        name: brave-browser
+        description: Brave Browser Repository
+        baseurl: https://brave-browser-rpm-release.s3.brave.com/x86_64/
+        gpgcheck: yes
+        gpgkey: https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+        enabled: yes
+      become: yes
+      when: install_brave | default(false)
+
+    - name: Import Brave Browser GPG key (RHEL/CentOS)
+      ansible.builtin.rpm_key:
+        key: https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+        state: present
+      become: yes
+      when: install_brave | default(false)
+
+    - name: Install Brave Browser (RHEL/CentOS)
+      ansible.builtin.package:
+        name: brave-browser
+        state: present
+      become: yes
+      when: install_brave | default(false)
+      ignore_errors: yes
+
+    # LibreOffice setup (RHEL/CentOS)
+    - name: Install LibreOffice (RHEL/CentOS)
+      ansible.builtin.package:
+        name: libreoffice
+        state: present
+      become: yes
+      when: install_libreoffice | default(false)
+      ignore_errors: yes
+
+    # VLC setup (RHEL/CentOS)
+    - name: Install VLC (RHEL/CentOS)
+      ansible.builtin.package:
+        name: vlc
+        state: present
+      become: yes
+      when: install_vlc | default(false)
+      ignore_errors: yes
+
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - (desktop_available or desktop_apps_enabled)
+
+# Install applications (FreeBSD)
+- name: Install desktop apps (FreeBSD)
+  block:
+    # Brave Browser setup (FreeBSD)
+    - name: Install Brave Browser (FreeBSD)
+      ansible.builtin.package:
+        name: brave
+        state: present
+      become: yes
+      when: install_brave | default(false)
+      ignore_errors: yes
+
+    # LibreOffice setup (FreeBSD)
+    - name: Install LibreOffice (FreeBSD)
+      ansible.builtin.package:
+        name: libreoffice
+        state: present
+      become: yes
+      when: install_libreoffice | default(false)
+      ignore_errors: yes
+
+    # VLC setup (FreeBSD)
+    - name: Install VLC (FreeBSD)
+      ansible.builtin.package:
+        name: vlc
+        state: present
+      become: yes
+      when: install_vlc | default(false)
+      ignore_errors: yes
+
+  when:
+    - ansible_facts['os_family'] == "FreeBSD"
+    - (desktop_available or desktop_apps_enabled)
+
+- name: Display desktop apps installation summary
+  ansible.builtin.debug:
+    msg: |
+      Desktop Apps Installation Summary:
+      - Desktop Environment: {{ current_desktop }}
+      - Brave Browser: {{ 'Installed' if install_brave | default(false) else 'Skipped' }}
+      - LibreOffice: {{ 'Installed' if install_libreoffice | default(false) else 'Skipped' }}
+      - VLC: {{ 'Installed' if install_vlc | default(false) else 'Skipped' }}
+  when: desktop_apps_enabled | default(false)

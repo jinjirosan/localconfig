@@ -73,6 +73,8 @@
     - login_setup
     - role: security_setup
       when: security_setup_enabled | default(false) | bool
+    - role: desktop_apps_setup
+      when: desktop_apps_enabled | default(false) | bool
 
 - name: Installation Summary
   hosts: all

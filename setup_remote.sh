@@ -26,6 +26,7 @@ SECURITY_DNS_SERVERS_DEFAULT="172.16.234.16 172.16.234.26"
 SECURITY_SETUP_ENABLED="false"
 SECURITY_SSH_ALLOWED="$SECURITY_SSH_ALLOWED_DEFAULT"
 SECURITY_DNS_SERVERS="$SECURITY_DNS_SERVERS_DEFAULT"
+DESKTOP_APPS_ENABLED="false"
 
 # Colors for output
 RED='\033[0;31m'
@@ -243,6 +244,28 @@ ask_security_setup() {
     esac
 }
 
+# Function to ask desktop apps setup
+ask_desktop_apps_setup() {
+    echo ""
+    echo -e "${BLUE}========================================${NC}"
+    echo -e "${BLUE}Desktop Applications Setup${NC}"
+    echo -e "${BLUE}========================================${NC}"
+    echo ""
+    read -p "Enable desktop applications setup? [y/N]: " enable_desktop_apps
+    enable_desktop_apps=${enable_desktop_apps:-N}
+    case $enable_desktop_apps in
+        [Yy]*)
+            DESKTOP_APPS_ENABLED="true"
+            echo -e "${GREEN}Desktop applications setup will be configured${NC}"
+            echo -e "${YELLOW}You will be prompted for each application during playbook execution${NC}"
+            ;;
+        *)
+            DESKTOP_APPS_ENABLED="false"
+            echo -e "${YELLOW}Desktop applications setup will be skipped${NC}"
+            ;;
+    esac
+}
+
 # Select target user interactively
 select_target_user
 
@@ -317,6 +340,9 @@ if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o PasswordAuthentication
 
     # Ask security_setup (firewall) options
     ask_security_setup
+
+    # Ask desktop apps setup
+    ask_desktop_apps_setup
 else
     echo -e "${RED}Error: Cannot connect to $REMOTE_HOST as $ANSIBLE_USER using SSH key authentication${NC}"
     echo ""
@@ -417,9 +443,9 @@ echo ""
 # Explicitly set the remote user to ensure it's used
 # Note: No --ask-become-pass needed since setup_client.sh configures NOPASSWD sudo for ansible user
 if [ "$TARGET_USER" = "all" ]; then
-    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=all replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS'"
+    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=all replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS' desktop_apps_enabled=$DESKTOP_APPS_ENABLED"
 else
-    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS'"
+    ansible-playbook playbooks/site.yml -i "$HOSTS_INI" -l "$REMOTE_HOST" -u "$ANSIBLE_USER" --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS' desktop_apps_enabled=$DESKTOP_APPS_ENABLED"
 fi
 
 # Check result

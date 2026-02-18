@@ -1,0 +1,8 @@
+---
+# Desktop Apps Setup Role - Default Variables
+
+# Enable/disable desktop apps installation
+desktop_apps_enabled: false
+
+# Desktop environment detection
+desktop_environment: "auto"  # auto, mate, gnome, kde, xfce, none
