@@ -123,7 +123,16 @@ Prompts for additional users to add to passwordless sudo (optional):
 - Enter space-separated usernames or press Enter to skip
 - These users get sudo access but not localconfig dotfiles (unless "all users" was selected)
 
-### Step 3b: Firewall Configuration (Optional)
+### Step 3b: Desktop Applications Setup (Optional)
+
+Prompts for desktop applications setup:
+1. **Enable desktop applications setup?** [y/N] - Choose whether to install desktop apps
+2. If yes, then prompts for each application:
+   - **Install Brave Browser?** [y/N]
+   - **Install LibreOffice?** [y/N]
+   - **Install VLC media player?** [y/N]
+
+### Step 3c: Firewall Configuration (Optional)
 
 Prompts for firewall (security_setup role) configuration:
 1. **Enable firewall?** [y/N] - Choose whether to enable the firewall
@@ -161,7 +170,7 @@ Executes the Ansible playbook with appropriate parameters:
 ansible-playbook playbooks/site.yml \
     -i hosts.ini \
     -l local \
-    --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS'" \
+    --extra-vars "target_user=$TARGET_USER replace_motd=$REPLACE_MOTD additional_sudo_users='$ADDITIONAL_SUDO_USERS' desktop_apps_enabled=$DESKTOP_APPS_ENABLED desktop_apps_brave=$DESKTOP_APPS_BRAVE desktop_apps_libreoffice=$DESKTOP_APPS_LIBREOFFICE desktop_apps_vlc=$DESKTOP_APPS_VLC security_setup_enabled=$SECURITY_SETUP_ENABLED security_ssh_allowed_networks='$SECURITY_SSH_ALLOWED' security_dns_servers='$SECURITY_DNS_SERVERS'" \
     $NEED_BECOME_PASS
 ```
 
@@ -171,7 +180,7 @@ When the script completes successfully, the following is configured:
 
 ### Tools Installed (System-wide)
 - `sudo`, `vim`, `htop`, `screen`, `net-tools`
-- `git`, `cifs-utils`, `gnupg`, `curl`, `gcc`, `mlocate`
+- `git`, `cifs-utils`, `gnupg`, `curl`, `gcc`, `mlocate` (Linux) or `findutils` (FreeBSD)
 
 ### Users Configured
 - **Sudoers**: `ansible_user` + `target_user(s)` + `additional_sudo_users` (if not "all")
@@ -179,8 +188,14 @@ When the script completes successfully, the following is configured:
 - **Vim Configuration**: Badwolf theme, airline plugin, autoload scripts
 
 ### Login Configuration
-- **MOTD**: System information and ASCII art
+- **MOTD**: ASCII art hostname banner
 - **SSH Banner**: Login warning banner
+- **System Information**: Dynamic display in `.bashrc` on login (hostname, OS, kernel, IP addresses with reverse DNS)
+
+### Desktop Applications (if enabled)
+- **Brave Browser**: Installed from official repository (if selected)
+- **LibreOffice**: Full office suite (if selected)
+- **VLC**: Media player (if selected)
 
 ### Firewall Configuration (if enabled)
 - **Linux (Debian/Ubuntu, RHEL)**: nftables firewall with default-deny policies

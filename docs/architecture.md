@@ -17,6 +17,8 @@ Localconfig is an Ansible-based configuration management system that automates t
 │  │ setup_remote │  │              │  │ tools_setup   │         │
 │  │ setup_client │  │              │  │ vim_config    │         │
 │  │              │  │              │  │ login_setup   │         │
+│  │              │  │              │  │ desktop_apps_ │         │
+│  │              │  │              │  │   setup       │         │
 │  │              │  │              │  │ security_setup│         │
 │  └──────────────┘  └──────────────┘  └──────────────┘         │
 │                                                                 │
@@ -67,7 +69,7 @@ Three bash scripts handle different deployment scenarios:
 
 ### 3. Ansible Roles
 
-Five roles handle specific aspects of the configuration:
+Six roles handle specific aspects of the configuration:
 
 #### `ssh_setup`
 - Ensures SSH key pair exists on control machine
@@ -88,10 +90,20 @@ Five roles handle specific aspects of the configuration:
 - Deploys all Vim autoload scripts and plugins to system-wide directories
 
 #### `login_setup`
-- Configures MOTD (Message of the Day) with system information and ASCII art
-- Sets up SSH login banners
+- Configures MOTD (Message of the Day) with ASCII art hostname banner
+- Sets up SSH login banners with security warning
+- Dynamic System Information (hostname, OS, kernel, IP addresses with reverse DNS) displayed in `.bashrc` on login
 - OS-aware deployment (Debian/Ubuntu uses `/etc/motd`, RHEL uses `/etc/issue`, FreeBSD uses `/etc/motd.template`)
 - Optional MOTD replacement (user can preview and choose to keep existing)
+- Ensures SSH service restarts after banner configuration
+
+#### `desktop_apps_setup` (optional)
+- Installs desktop applications: Brave Browser, LibreOffice, VLC
+- Detects desktop environment (MATE, GNOME, XFCE, KDE)
+- OS-specific installation (Debian/Ubuntu, RHEL/CentOS, FreeBSD)
+- Uses official repositories for Brave Browser with proper GPG key management
+- Interactive prompts in setup scripts for each application
+- Only runs when enabled via interactive prompts in setup scripts
 
 #### `security_setup` (optional)
 - Deploys stateful firewall with default-deny inbound/outbound filtering
@@ -117,6 +129,7 @@ User runs setup_local.sh
     │   ├─► Option 2: Specific user(s) - space-separated
     │   └─► Option 3: All users
     ├─► Additional sudo users selection
+    ├─► Desktop applications setup prompts (optional)
     ├─► Firewall configuration prompts (optional)
     │
     └─► Executes playbooks/site.yml
@@ -157,6 +170,7 @@ User runs setup_remote.sh <vm_ip>
     │   └─► Option 3: All users
     ├─► Additional sudo users selection
     ├─► MOTD preview and replacement option
+    ├─► Desktop applications setup prompts (optional)
     ├─► Firewall configuration prompts (optional)
     │
     └─► Executes playbooks/site.yml via SSH
@@ -213,6 +227,7 @@ localconfig/
 │   ├── tools_setup/         # Tools installation role
 │   ├── vim_config/          # Vim configuration role
 │   ├── login_setup/         # MOTD and login banners role
+│   ├── desktop_apps_setup/  # Optional desktop applications role
 │   └── security_setup/      # Optional firewall role
 ├── ansible.cfg              # Ansible configuration
 ├── setup_local.sh           # Local deployment script
@@ -231,6 +246,9 @@ localconfig/
 6. **Sudo Configuration**: Separate handling for single users vs "all users" to avoid adding invalid entries
 7. **Optional Security**: Firewall configuration is optional and interactive, allowing users to choose when to enable it
 8. **Log Visibility**: Firewall logs are integrated into login display (`.bashrc`) showing top blocked destinations
+9. **Dynamic System Info**: System information (hostname, OS, kernel, IPs) displayed dynamically in `.bashrc` on every login, always up-to-date
+10. **Ansible User Cleanup**: After deployment, ansible user is automatically disabled (sudo removed, SSH keys moved) via delayed background script for security hardening
+11. **Non-Interactive Execution**: All questions asked upfront in setup scripts; playbook runs completely non-interactively
 
 ## Dependencies
 

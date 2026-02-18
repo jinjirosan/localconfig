@@ -60,11 +60,16 @@ target_user: "all"
 2. `tools_setup`
 3. `vim_config`
 4. `login_setup`
-5. `security_setup` (only when `security_setup_enabled` is true, e.g. when you answer "yes" to "Enable firewall?" in setup_remote.sh or setup_local.sh)
+5. `desktop_apps_setup` (only when `desktop_apps_enabled` is true, e.g. when you answer "yes" to "Enable desktop applications setup?" in setup_remote.sh or setup_local.sh)
+6. `security_setup` (only when `security_setup_enabled` is true, e.g. when you answer "yes" to "Enable firewall?" in setup_remote.sh or setup_local.sh)
 
 **Variables**:
 - `files_dir`: Path to `files/` directory containing dotfiles and Vim configs
 - `target_user`: Passed through from first play or defaults to `ansible_user`
+- `desktop_apps_enabled`: Set by setup_remote.sh / setup_local.sh when you enable desktop apps
+- `desktop_apps_brave`: Set by setup scripts based on user's answer to "Install Brave Browser?"
+- `desktop_apps_libreoffice`: Set by setup scripts based on user's answer to "Install LibreOffice?"
+- `desktop_apps_vlc`: Set by setup scripts based on user's answer to "Install VLC?"
 - `security_setup_enabled`: Set by setup_remote.sh / setup_local.sh when you enable the firewall
 - `security_ssh_allowed_networks`: Space-separated CIDR ranges for SSH (e.g. `172.16.233.0/26 172.16.234.0/26`)
 - `security_dns_servers`: Space-separated DNS server IPs for outbound allow list
@@ -183,7 +188,71 @@ changed: [172.16.234.54] => (item=vim)
 
 ## Role: login_setup
 
-Configures login banners, MOTD, and SSH banner. See role tasks and templates for details.
+### Purpose
+
+Configures login banners, MOTD, and SSH banner with security warnings.
+
+### Tasks
+
+- **MOTD Configuration**: Deploys ASCII art hostname banner to MOTD (OS-specific locations)
+- **SSH Banner**: Deploys security warning banner to `/etc/ssh/banner` and configures SSH to display it
+- **System Information**: Dynamic system information (hostname, OS, kernel, IP addresses with reverse DNS) is displayed in `.bashrc` on every login, ensuring it's always up-to-date
+- **OS-Aware**: Uses `/etc/motd` (Debian/Ubuntu), `/etc/issue` and `/etc/issue.net` (RHEL), or `/etc/motd.template` (FreeBSD)
+- **Optional Replacement**: User can preview existing MOTD and choose to keep it or replace with new one
+- **SSH Service Restart**: Ensures SSH service restarts after banner configuration to apply changes
+
+### Key Features
+
+- System information is displayed dynamically in `.bashrc`, not statically in MOTD
+- SSH banner always applied (explicit restart task ensures it works even if nothing changed)
+- ASCII art hostname banner in MOTD (optional, user can choose to keep existing MOTD)
+
+## Role: desktop_apps_setup (optional)
+
+### Purpose
+
+Installs desktop applications (Brave Browser, LibreOffice, VLC) on systems with desktop environments. Only runs when **Enable desktop applications setup?** is answered with **yes** in `setup_remote.sh` or `setup_local.sh`.
+
+### When It Runs
+
+- **setup_remote.sh**: After firewall configuration, you are asked: (1) Enable desktop applications setup? (2) If yes, then: Install Brave Browser? Install LibreOffice? Install VLC?
+- **setup_local.sh**: After firewall configuration, the same prompts are shown.
+- The role is executed only when `desktop_apps_enabled` is true.
+
+### Applications
+
+1. **Brave Browser**:
+   - Uses official Brave repositories with proper GPG key management
+   - Debian/Ubuntu: Adds repository with signed-by keyring
+   - RHEL/CentOS: Adds repository with GPG key import
+   - FreeBSD: Uses `brave` package from ports
+
+2. **LibreOffice**:
+   - Installed from standard OS repositories
+   - Full office suite
+
+3. **VLC Media Player**:
+   - Installed from standard OS repositories
+   - Media playback support
+
+### Desktop Environment Detection
+
+- Automatically detects desktop environment (MATE, GNOME, XFCE, KDE)
+- Checks for X11 or Wayland availability
+- Skips installation if no desktop environment detected (unless explicitly forced)
+
+### OS Support
+
+- **Debian/Ubuntu**: Full support for all applications
+- **RHEL/CentOS**: Full support for all applications
+- **FreeBSD**: Full support for all applications
+
+### Variables
+
+- `desktop_apps_enabled`: Set by setup scripts when user enables desktop apps
+- `desktop_apps_brave`: Set by setup scripts based on user's answer
+- `desktop_apps_libreoffice`: Set by setup scripts based on user's answer
+- `desktop_apps_vlc`: Set by setup scripts based on user's answer
 
 ## Role: security_setup (optional)
 
@@ -199,9 +268,9 @@ Deploys the appropriate stateful firewall per OS with default-deny inbound and o
 
 ### OS-Specific Behavior
 
-- **Debian / Ubuntu**: nftables; rules in `/etc/nftables.conf`; outbound drops logged with prefix `nftables-drop-out` (visible in `journalctl -k` and in the login "Top Blocked Destinations" block in `.bashrc`).
-- **RHEL / CentOS**: nftables; firewalld is disabled and masked; same rules and logging as Debian.
-- **FreeBSD**: PF; rules in `/etc/pf.conf`; outbound blocks logged to syslog (parsed in `.bashrc` for "Top Blocked Destinations").
+- **Debian / Ubuntu**: nftables; rules in `/etc/nftables.conf`; outbound drops logged with prefix `nftables-drop-out` (visible in `journalctl -k` and in the login "Top Blocked Destinations" block in `.bashrc`). Uses async/poll for rule loading to prevent SSH connection drops.
+- **RHEL / CentOS**: nftables; firewalld is disabled and masked; same rules and logging as Debian. Uses async/poll for rule loading.
+- **FreeBSD**: PF; rules in `/etc/pf.conf`; outbound blocks logged to syslog (parsed in `.bashrc` for "Top Blocked Destinations"). Uses async/poll for rule loading. pflogd configured for binary log parsing.
 
 ### Log Limits (Linux)
 
@@ -417,6 +486,9 @@ playbooks/site.yml
         │
         ├─► Role: login_setup
         │   └─► MOTD, SSH banner, etc.
+        │
+        ├─► Role: desktop_apps_setup (if desktop_apps_enabled)
+        │   └─► Brave Browser, LibreOffice, VLC
         │
         ├─► Role: security_setup (if security_setup_enabled)
         │   ├─► Linux: nftables + journald limits

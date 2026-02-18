@@ -41,8 +41,8 @@ The playbook orchestrates several roles that set up your development environment
    - Backs up all SSH keys from target systems to `discovered_ssh_keys/` directory
 
 2. **tools_setup**:
-   - Detects OS (Debian/Ubuntu vs RHEL) and selects appropriate package manager
-   - Installs essential tools: `sudo`, `vim`, `htop`, `screen`, `net-tools`, `git`, `cifs-utils`, `gnupg`, `curl`, `gcc`, `mlocate`
+   - Detects OS (Debian/Ubuntu vs RHEL vs FreeBSD) and selects appropriate package manager
+   - Installs essential tools: `sudo`, `vim`, `htop`, `screen`, `net-tools`, `git`, `cifs-utils`, `gnupg`, `curl`, `gcc`, `mlocate` (Linux) or `findutils` (FreeBSD)
    - Configures sudo access with NOPASSWD for the ansible user
    - Verifies package installation
 
@@ -54,18 +54,27 @@ The playbook orchestrates several roles that set up your development environment
    - Configures system-wide Vim directories
 
 4. **login_setup**:
-   - Configures MOTD (Message of the Day) with system information
-   - Sets up SSH login banners
+   - Configures MOTD (Message of the Day) with ASCII art hostname banner
+   - Sets up SSH login banners with security warning
+   - Dynamic System Information (hostname, OS, kernel, IP addresses with reverse DNS) displayed in `.bashrc` on login
    - OS-aware deployment (Debian/Ubuntu, RHEL, FreeBSD)
 
-5. **security_setup** (optional):
+5. **desktop_apps_setup** (optional):
+   - Installs desktop applications: Brave Browser, LibreOffice, VLC
+   - Detects desktop environment (MATE, GNOME, XFCE, KDE)
+   - OS-specific installation (Debian/Ubuntu, RHEL/CentOS, FreeBSD)
+   - Interactive prompts in setup scripts for each application
+   - Only runs when enabled via interactive prompts in setup scripts
+
+6. **security_setup** (optional):
    - Deploys stateful firewall with default-deny inbound/outbound filtering
-   - **Linux (Debian/Ubuntu, RHEL)**: nftables firewall
-   - **FreeBSD**: PF firewall
-   - Allows SSH only from configurable subnets
+   - **Linux (Debian/Ubuntu, RHEL)**: nftables firewall (disables/masks firewalld on RHEL)
+   - **FreeBSD**: PF firewall with pflogd logging
+   - Allows SSH only from configurable subnets (CIDR ranges)
    - Allows DNS/DHCP and selected outbound (HTTP/HTTPS, SSH)
-   - Logs outbound drops for visibility
+   - Logs outbound drops for visibility (integrated into `.bashrc` login display)
    - Configures log limits (500MB, 14-day retention)
+   - Uses async/poll for firewall rule loading to prevent SSH connection drops
    - Only runs when enabled via interactive prompts in setup scripts
 
 #### Features:
@@ -195,7 +204,13 @@ When you run the script, you'll be prompted for:
 
 3. **MOTD Replacement**: Preview and optionally replace the existing MOTD
 
-4. **Firewall Configuration** (optional):
+4. **Desktop Applications Setup** (optional):
+   - Enable desktop applications setup?
+   - Install Brave Browser? [y/N]
+   - Install LibreOffice? [y/N]
+   - Install VLC media player? [y/N]
+
+5. **Firewall Configuration** (optional):
    - Enable firewall (security_setup role)?
    - SSH allowed source ranges (CIDR subnets)
    - DNS servers for outbound allow list
@@ -259,6 +274,9 @@ localconfig/
 │   │   ├── tasks/
 │   │   ├── templates/
 │   │   └── handlers/
+│   ├── desktop_apps_setup/
+│   │   ├── tasks/
+│   │   └── defaults/
 │   ├── security_setup/
 │   │   ├── tasks/
 │   │   ├── templates/
