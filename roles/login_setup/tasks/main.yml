@@ -249,4 +249,3 @@
     state: restarted
   become: yes
   when: sshd_config_test.rc == 0
-
