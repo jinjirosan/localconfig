@@ -33,10 +33,15 @@
     mode: '0600'
   become: yes
 
-- name: Flush and load nftables rules
-  ansible.builtin.command: nft -f /etc/nftables.conf
+- name: Flush and load nftables rules (may temporarily interrupt SSH connection)
+  ansible.builtin.shell: "nft -f /etc/nftables.conf; echo 'nftables rules loaded'"
   become: yes
   changed_when: true
+  register: nft_result
+  async: 15
+  poll: 3
+  # Note: If SSH connection drops due to rule reload, Ansible will reconnect
+  # The rules should allow SSH from control host's subnet, so reconnection will work
 
 - name: Enable and start nftables service (Debian)
   ansible.builtin.systemd:

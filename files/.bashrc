@@ -665,6 +665,70 @@ PROMPT_COMMAND='__setprompt'
 
 #=============== BASH login info ========================== {{{1
 
+# Dynamic System Information (always up to date)
+echo ""                         # for spacing
+
+HOSTNAME_DISPLAY=$(hostname 2>/dev/null || echo "unknown")
+OS_DISPLAY=""
+KERNEL_DISPLAY=$(uname -r 2>/dev/null || echo "unknown")
+
+if [ -f /etc/os-release ]; then
+    # Most modern Linux
+    OS_DISPLAY=$(. /etc/os-release 2>/dev/null; echo "${PRETTY_NAME:-$NAME $VERSION_ID}")
+elif [ -f /etc/debian_version ]; then
+    OS_DISPLAY="Debian $(cat /etc/debian_version 2>/dev/null)"
+elif [ -f /etc/redhat-release ]; then
+    OS_DISPLAY="$(cat /etc/redhat-release 2>/dev/null)"
+elif [ -f /etc/freebsd-update.conf ] || uname -s 2>/dev/null | grep -q FreeBSD; then
+    OS_DISPLAY="FreeBSD $(freebsd-version 2>/dev/null || uname -r 2>/dev/null)"
+else
+    OS_DISPLAY="$(uname -s 2>/dev/null) $(uname -r 2>/dev/null)"
+fi
+
+echo "System Information:"
+echo "  Hostname: $HOSTNAME_DISPLAY"
+[ -n "$OS_DISPLAY" ] && echo "  OS: $OS_DISPLAY"
+echo "  Kernel: $KERNEL_DISPLAY"
+
+echo "  IP addresses:"
+IP_LIST=""
+
+# Collect IP addresses per-OS
+if [ -f /etc/debian_version ] || [ -f /etc/redhat-release ]; then
+    # Linux: hostname -I is usually available
+    IP_LIST=$(hostname -I 2>/dev/null | tr ' ' '\n' | sed '/^$/d')
+elif [ -f /etc/freebsd-update.conf ] || uname -s 2>/dev/null | grep -q FreeBSD; then
+    # FreeBSD: parse ifconfig output
+    IP_LIST=$(ifconfig -a 2>/dev/null | awk '/inet /{print $2} /inet6 /{print $2}' | sed 's/%.*//' | sed '/^127\.0\.0\.1$/d;/^::1$/d')
+else
+    IP_LIST=$(hostname -I 2>/dev/null | tr ' ' '\n' | sed '/^$/d')
+fi
+
+if [ -n "$IP_LIST" ]; then
+    echo "$IP_LIST" | while read -r ip; do
+        [ -z "$ip" ] && continue
+
+        RDNS=""
+        if command -v getent >/dev/null 2>&1; then
+            # Portable reverse lookup via NSS
+            RDNS=$(getent hosts "$ip" 2>/dev/null | awk '{print $2}' | head -1)
+        elif command -v host >/dev/null 2>&1; then
+            # Fallback to host(1)
+            RDNS=$(host "$ip" 2>/dev/null | awk '/domain name pointer/ {print $5}' | sed 's/\.$//' | head -1)
+        fi
+
+        if [ -n "$RDNS" ]; then
+            echo "    - $ip ($RDNS)"
+        else
+            echo "    - $ip"
+        fi
+    done
+else
+    echo "    - (no IP addresses detected)"
+fi
+
+echo ""                         # for spacing
+
 echo ""                         # for spacing
 w                               # uptime information and who is logged in
 echo ""                         # for spacing
