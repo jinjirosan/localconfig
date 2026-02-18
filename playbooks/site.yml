@@ -128,14 +128,6 @@
       changed_when: false
       when: ansible_connection != 'local'
 
-    - name: Remove ansible user from sudoers
-      ansible.builtin.lineinfile:
-        path: "{{ sudoers_path }}"
-        line: "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL"
-        state: absent
-      become: true
-      when: ansible_connection != 'local'
-
     - name: Check if ansible user authorized_keys exists
       ansible.builtin.stat:
         path: "{{ ansible_user_home_cmd.stdout }}/.ssh/authorized_keys"
@@ -155,6 +147,14 @@
         - ansible_user_home_cmd.stdout != ''
         - ansible_authorized_keys_stat.stat is defined
         - ansible_authorized_keys_stat.stat.exists | default(false)
+
+    - name: Remove ansible user from sudoers
+      ansible.builtin.lineinfile:
+        path: "{{ sudoers_path }}"
+        line: "{{ ansible_user }} ALL=(ALL:ALL) NOPASSWD:ALL"
+        state: absent
+      become: true
+      when: ansible_connection != 'local'
 
     - name: Display ansible user disabled message
       ansible.builtin.debug:
