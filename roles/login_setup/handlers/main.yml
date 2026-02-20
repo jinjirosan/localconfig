@@ -9,3 +9,9 @@
     state: restarted
   become: yes
 
+- name: restart dropbear
+  ansible.builtin.service:
+    name: dropbear
+    state: restarted
+  become: yes
+

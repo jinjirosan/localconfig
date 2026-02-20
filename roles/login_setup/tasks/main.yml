@@ -215,6 +215,34 @@
   when: replace_motd | default('yes') | lower == 'no'
 
 # Configure SSH Banner
+# Detect active SSH daemon: dropbear vs OpenSSH (sshd)
+# Only relevant on Linux; FreeBSD always uses OpenSSH
+- name: Detect active SSH daemon (dropbear vs OpenSSH)
+  ansible.builtin.command: pgrep -x dropbear
+  become: yes
+  register: dropbear_running
+  changed_when: false
+  failed_when: false
+  when: ansible_facts['os_family'] in ['Debian', 'RedHat']
+
+- name: Set SSH daemon fact
+  ansible.builtin.set_fact:
+    ssh_daemon: "{{ 'dropbear' if (dropbear_running is defined and dropbear_running.rc == 0) else 'openssh' }}"
+  when: ansible_facts['os_family'] in ['Debian', 'RedHat']
+
+- name: Set SSH daemon fact (non-Linux, default OpenSSH)
+  ansible.builtin.set_fact:
+    ssh_daemon: openssh
+  when: ansible_facts['os_family'] not in ['Debian', 'RedHat']
+
+# Deploy banner file (shared path for both OpenSSH and dropbear)
+- name: Ensure /etc/ssh directory exists for banner
+  ansible.builtin.file:
+    path: /etc/ssh
+    state: directory
+    mode: '0755'
+  become: yes
+
 - name: Deploy SSH banner template
   ansible.builtin.template:
     src: ssh_banner.j2
@@ -224,9 +252,10 @@
     mode: '0644'
   become: yes
   register: ssh_banner_deployed
-  notify: restart sshd
+  notify: "{{ 'restart dropbear' if ssh_daemon == 'dropbear' else 'restart sshd' }}"
 
-- name: Configure SSH to use banner
+# --- OpenSSH path: sshd_config, syntax check, restart ---
+- name: Configure OpenSSH to use banner
   ansible.builtin.lineinfile:
     path: /etc/ssh/sshd_config
     regexp: '^#?Banner'
@@ -235,17 +264,50 @@
   become: yes
   register: ssh_banner_config_updated
   notify: restart sshd
+  when: ssh_daemon == 'openssh'
 
-- name: Ensure SSH config syntax is valid
+- name: Ensure OpenSSH config syntax is valid
   ansible.builtin.command: sshd -t
   become: yes
   register: sshd_config_test
   changed_when: false
   failed_when: sshd_config_test.rc != 0
+  when: ssh_daemon == 'openssh'
 
-- name: Restart SSH service to apply banner configuration
-  ansible.builtin.service:
-    name: "{{ 'ssh' if ansible_facts['os_family'] == 'Debian' else 'sshd' }}"
-    state: restarted
+# --- Dropbear path: /etc/default/dropbear (Debian) or /etc/sysconfig/dropbear (RHEL) ---
+- name: Ensure dropbear config directory exists (RHEL)
+  ansible.builtin.file:
+    path: /etc/sysconfig
+    state: directory
+    mode: '0755'
   become: yes
-  when: sshd_config_test.rc == 0
+  when:
+    - ssh_daemon == 'dropbear'
+    - ansible_facts['os_family'] == 'RedHat'
+
+- name: Configure dropbear to use banner (Debian/Ubuntu)
+  ansible.builtin.lineinfile:
+    path: /etc/default/dropbear
+    regexp: '^#?DROPBEAR_BANNER='
+    line: 'DROPBEAR_BANNER="/etc/ssh/banner"'
+    state: present
+  become: yes
+  register: dropbear_banner_updated
+  notify: restart dropbear
+  when:
+    - ssh_daemon == 'dropbear'
+    - ansible_facts['os_family'] == 'Debian'
+
+- name: Configure dropbear to use banner (RHEL)
+  ansible.builtin.lineinfile:
+    path: /etc/sysconfig/dropbear
+    regexp: '^#?OPTIONS='
+    line: 'OPTIONS="-b /etc/ssh/banner"'
+    state: present
+  become: yes
+  register: dropbear_banner_updated_rhel
+  notify: restart dropbear
+  when:
+    - ssh_daemon == 'dropbear'
+    - ansible_facts['os_family'] == 'RedHat'
+
