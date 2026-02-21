@@ -288,8 +288,8 @@
 - name: Configure dropbear to use banner (Debian/Ubuntu)
   ansible.builtin.lineinfile:
     path: /etc/default/dropbear
-    regexp: '^#?DROPBEAR_BANNER='
-    line: 'DROPBEAR_BANNER="/etc/ssh/banner"'
+    regexp: '^#?DROPBEAR_EXTRA_ARGS='
+    line: 'DROPBEAR_EXTRA_ARGS="-b /etc/ssh/banner"'
     state: present
   become: yes
   register: dropbear_banner_updated
